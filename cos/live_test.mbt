@@ -56,6 +56,15 @@ fn prefix(label : String) -> String {
 }
 
 ///|
+/// 界按本 suite 的最大那一发配：1 MiB 的分片，从远端 runner 打到境内桶。
+/// 适配层的默认界是 30 秒，而 CI 上这一发连着三轮量到 30007 / 30002 / 30001 ms 才死——
+/// 那不是协议形状错了，是链路的速率在这条界边上。上游判的是**界不拆也不抬默认值**，
+/// 覆盖口就是调用方自己传 `timeout~`（https://github.com/mldong/moon-hutool/issues/6），
+/// 所以这一档由测试自己放宽到 120 秒，SDK 与适配层的默认一个字节没动。
+/// 复核钩子：放宽之后同一发若仍**跑满新的界**，那就不是速率能解释的形状，另开 issue。
+let live_timeout_ms : Int32 = 120000
+
+///|
 fn build(
   ak : String,
   sk : String,
@@ -63,7 +72,9 @@ fn build(
 ) -> @cos.Client raise @error.CosError {
   let credentials = @auth.Credentials::new(ak, sk)
   let config = @config.Config::new(cos_region, credentials)
-  let transport : &@transport.Transport = @transport.AsyncHttpTransport::new()
+  let transport : &@transport.Transport = @transport.AsyncHttpTransport::new(
+    timeout=live_timeout_ms,
+  )
   @cos.Client::new(config, transport)
 }
 
