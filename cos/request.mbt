@@ -96,7 +96,8 @@ fn method_of(verb : String) -> @transport.Method raise @error.CosError {
 
 ///|
 /// 问号之后一律隐去。传输层的文案有几档会把整条 URL 原样写进去（hutool 的
-/// `InvalidRequest`：`url 缺 :// 分隔`、`url 带 fragment`、`pathless query` 三档都带），
+/// `InvalidRequest`：`url 缺 :// 分隔`、`url 带 fragment`、`url 缺 authority`、`pathless query`
+/// 四档都带），
 /// 而预签名 URL 的 query **就是凭据本体**——`q-ak` 加一条时间窗内可用的签名，
 /// 落进日志等于把这条授权又发出去一份。主机与路径留着：诊断要看的是"哪一发"，不是那把钥匙。
 fn redact_query(text : String) -> String {
