@@ -1,0 +1,272 @@
+name: ci
+
+# 三仓同形（moon-s3 / moon-oss / moon-kodo）的门禁。这条仓的真端点档只能打**真桶**：
+# COS 没有可在 runner 里离线起的端点（S3 兼容层那一档的形状与读数归 `moon-s3`，不在这里），
+# 所以 CI 用四个 secret（COS_AK / COS_SK / COS_BUCKET / COS_REGION）跑那些 live 腿。
+#
+# COS_DOMAIN **刻意不是 secret，也没有任何一条用例读它**（判据写在 `cos/live_test.mbt` 的文件头）。
+# 别"顺手"把它补进来——补上只会红在证书上，读数有两条：
+#   · 自定义域名备案后确实路由进桶：签 `Host: <自定义域名>` 的 GET 走 **80 端口**回 200 并取回正文
+#     （匿名读私有对象回 403，证明真打到桶里了）；但 443 没生效——证书是
+#     `CN=*.cos.<区域>.myqcloud.com`、SAN 不覆盖那个名，而本 SDK 只拼 `https://` 的 URL。
+#   · 预签名默认把 `Host` 算进签名，所以签虚主机那条 URL 换到自定义域名上取就 403；
+#     换 `sign_host=false` 现签一条才通，而那一档现在只在 `auth` 层、没端上 `cos` 包的公开面。
+# ⇒ 腿一律用虚主机派生出来的域名。两件事（443 证书、公开面那条不签 Host 的预签名）齐了才谈 domain。
+#
+# 残留：每条 live 腿末尾自删自己建的对象，并按**自己那一格前缀** `moonfs-cos-<档>-<run-tag>`
+# 复列断 0（`assert_no_residue`）。**桶侧没有配 `moonfs-` 前缀的生命周期规则**
+# ⇒ 跑挂或被取消的那一发没人自动清，别把这条门禁当成"残留有服务端兜"。要清就手工清那个前缀，
+# 别加全局扫场：同一次 `moon test` 里的 async 用例是并发跑的（`-j 1` 只管编译并行度），
+# 整族前缀扫场会把隔壁那条腿刚写的夹具删掉，第一轮就是这么读到莫须有 404 的。
+#
+# 写边界：只在 COS_BUCKET 那个桶里读写自命名前缀，不建桶、不删桶、不改桶配置；
+# 凭据只打印长度，桶名/区域/host 可以打印。
+#
+# secret 没到位时**必须红**，不许退化成 SKIP 过关：见 Preflight 那一步。
+# 用例条数断言不许删：条数是"真跑过"的唯一证据——异步用例在个别档位会被静默丢掉而退出码仍为 0
+# （本仓只跑 wasm＋native 两档，但这条纪律从隔壁 moon-oss 照带：只看退出码会拿到假绿）。
+# 条数与改动同笔更新；对不上先现读再改，严禁拿删断言变绿。
+#
+# 两个断言数字的来历（2026-10-18 本机不带凭据实跑 `moon test --target wasm -j 1 --no-render`）：
+#   · EXPECTED_TESTS   = 那一跑 `Total tests:` 的读数 = 27（18 条本地档 + 9 条 live 档）
+#   · EXPECTED_SKIPS   = 同一跑里 `SKIP IS NOT A PASS` 的行数 = 9 = live 腿总数
+#     （对象族往返／分片五步／预签名 GET+PUT／原生 ACL 读写／错密钥必拒／服务级列举与错区域／
+#      M1 sha256 探针／M7 list-type=2 探针／M16 多值参数探针）
+# 这两个数各管一头：**给了 secret 的 CI 跑必须 0 条 SKIP**（CI_EXPECTED_SKIPS），
+# 而 EXPECTED_SKIPS 由"不带凭据那一跑"那一步核——它的含义是"live 腿一条都没少"。
+# 有人加/删 live 腿时要同时改这两个数，且改前先实跑取数，不许推算。
+#
+# native 档只在 CI（ubuntu runner）出证：本机是 Windows，这版 `moonbitlang/async` 的 C stub
+# 只支持 MSVC，`moon test --target native` 在那台机器上根本编不过——那是工具链边界，不是回归。
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*.*.*']
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "检查全绿后是否发布到 mooncakes（tag 触发默认发布；手动触发需显式勾选）"
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Check / Build / Test (wasm + native, live COS bucket)
+    runs-on: ubuntu-latest
+    env:
+      EXPECTED_TESTS: "27"
+      EXPECTED_SKIPS: "9"
+      CI_EXPECTED_SKIPS: "0"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MoonBit toolchain (latest)
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> $GITHUB_PATH
+
+      - name: Toolchain version
+        run: |
+          moon version --all
+          moon update
+
+      - name: Preflight live-bucket credentials (values never printed)
+        env:
+          COS_AK: ${{ secrets.COS_AK }}
+          COS_SK: ${{ secrets.COS_SK }}
+          COS_BUCKET: ${{ secrets.COS_BUCKET }}
+          COS_REGION: ${{ secrets.COS_REGION }}
+        run: |
+          # 只打印长度：这四把里 AK/SK 是密钥本体，桶名与区域虽可打印，也在同一段里一起按长度报，
+          # 免得有人把这一格当成"可以 echo 值"的口子。
+          missing=0
+          for pair in "COS_AK:${#COS_AK}" "COS_SK:${#COS_SK}" \
+                      "COS_BUCKET:${#COS_BUCKET}" "COS_REGION:${#COS_REGION}"; do
+            name=${pair%%:*}; len=${pair##*:}
+            if [ "$len" = "0" ]; then
+              echo "::error::$name 没到位——缺它这 9 条腿只会 SKIP，那不是绿"
+              missing=1
+            else
+              echo "  $name 到位（长度 $len，值不外泄）"
+            fi
+          done
+          # 这里**不引用** secrets.COS_DOMAIN：自定义域名这一代不接（443 证书没绑、预签名绑 Host），
+          # 也没有任何一条用例读它，理由与两条读数写在文件头。别把这一格"补全"成第五个 secret。
+          [ "$missing" = "0" ]
+
+      - name: Check
+        run: moon check --target wasm --no-render
+
+      - name: Build
+        run: |
+          moon build --target wasm --no-render
+          moon build --target native --no-render
+
+      - name: "Test (with credentials: live legs must really run)"
+        env:
+          COS_AK: ${{ secrets.COS_AK }}
+          COS_SK: ${{ secrets.COS_SK }}
+          COS_BUCKET: ${{ secrets.COS_BUCKET }}
+          COS_REGION: ${{ secrets.COS_REGION }}
+          COS_RUN_TAG: ${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          # 为什么整档允许重试（最多 3 次）：本机带凭据实测过——打公网 COS 的 live 腿会间歇红在
+          # `cos network: network: ...`（服务级列举那一发先红过一次，同批用例复跑是绿的）⇒ 公网间歇，
+          # 不是代码。但"用了几次才过"必须写进 summary 并受硬闸约束：靠 re-run 混过去的门禁等于没有门禁。
+          # COS_RUN_TAG 进的是 `cos/moon.pkg` 里那条 `moonbitlang/core/env` 的读数：
+          # 每条腿用它把自己那一格前缀隔开，重跑不与上一轮的残留互踩。
+          run_live() {
+            target=$1; out=$2; a=1
+            until moon test --target "$target" -j 1 --no-render > "$out" 2>&1; do
+              if [ "$a" -ge 3 ]; then
+                echo "::error::$target 档连红 3 次，这次不是抖动"
+                grep -E "FAILED|failed:" "$out" | head -8 || true
+                exit 1
+              fi
+              a=$((a + 1)); sleep 20
+            done
+            echo "$target 档通过所用尝试次数：$a / 3" >> "$GITHUB_STEP_SUMMARY"
+            grep -q "Total tests: $EXPECTED_TESTS, passed: $EXPECTED_TESTS, failed: 0" "$out"
+            skips=$(grep -c "SKIP IS NOT A PASS" "$out" || true)
+            if [ "$skips" != "$CI_EXPECTED_SKIPS" ]; then
+              echo "::error::$target 档有 $skips 条 live 腿在 CI 里 SKIP 了（应为 $CI_EXPECTED_SKIPS）——" \
+                   "secret 掉了或公网断了，这不算绿"
+              grep -n "SKIP IS NOT A PASS" "$out" | head -3
+              exit 1
+            fi
+            echo "$target 档：$EXPECTED_TESTS 条全绿已核，SKIP 行数=$skips" >> "$GITHUB_STEP_SUMMARY"
+          }
+          run_live wasm wasm-test.txt
+          run_live native native-test.txt
+          # 三条承重读数打出来，让人一眼看出真端点真被打到（这些行不含任何凭据）：
+          # 完成件 ETag 的 `-N` 形状、对象级 public-read-write 的服务端结论、错密钥那一发的码。
+          grep -E "M9 读数：完成件 etag=|M10 对象级 public-read-write 读数=|错密钥读数=" wasm-test.txt | head -6
+
+      - name: "Test (without credentials: the 9 live legs must skip loudly)"
+        run: |
+          # 这一步核的是"响亮 SKIP"这件事本身：把四个 secret 从环境里摘掉再跑一遍，
+          # 要求条数照旧 27、SKIP 行数恰为 $EXPECTED_SKIPS（= live 腿总数）。
+          # 少一条是有人给某条腿加了"没凭据也照跑"的分支，多一条是有人新加了腿而没改 EXPECTED_SKIPS。
+          # 判"不存在"这类负向档不许被拆成"无凭据也能跑"——那它们就不是 live 腿了。
+          out=nocred-test.txt
+          env -u COS_AK -u COS_SK -u COS_BUCKET -u COS_REGION -u COS_RUN_TAG \
+            moon test --target wasm -j 1 --no-render > "$out" 2>&1
+          grep -q "Total tests: $EXPECTED_TESTS, passed: $EXPECTED_TESTS, failed: 0" "$out"
+          skips=$(grep -c "SKIP IS NOT A PASS" "$out" || true)
+          if [ "$skips" != "$EXPECTED_SKIPS" ]; then
+            echo "::error::无凭据那一跑的 SKIP 行数=$skips，应为 $EXPECTED_SKIPS（live 腿总数）"
+            grep -n "SKIP IS NOT A PASS" "$out" | head -12
+            exit 1
+          fi
+          echo "无凭据档：$EXPECTED_TESTS 条、SKIP $skips 条（live 腿总数），已核" \
+            >> "$GITHUB_STEP_SUMMARY"
+          # 无凭据那一跑里不许出现任何签名材料（`missing: COS_AK, ...` 那行是**变量名**，不是值，
+          # 由 `live_env` 响亮打出来，属于设计的一部分；这里只拦真的东西：一条签好的串）。
+          ! grep -qE "q-signature=|q-ak=" "$out"
+
+      - name: README snippet check
+        run: |
+          export MOON_HOME="$HOME/.moon"
+          bash scripts/readme-check.sh
+
+      - name: Generated interface is up to date
+        run: |
+          moon info --target wasm
+          git diff --exit-code -- '*pkg.generated.mbti'
+
+      - name: Formatting
+        run: moon fmt --check
+
+      - name: Assert zero warnings
+        run: |
+          moon check --target wasm --no-render 2>&1 | tee check.txt
+          ! grep -q "Warning" check.txt
+
+  publish:
+    name: Publish mldong/moon-cos to mooncakes
+    needs: verify
+    # 判据是单数 'tag'：写成 'tags' 会让 tag 推送的整个 publish job 被 skip，而 workflow 结论
+    # 照旧 success（moon-token 的 v0.1.7 就是这么静默漏发过一次）。下面第一步把三个值打进 log。
+    if: github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.publish)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: What triggered this publish
+        env:
+          PUBLISH_INPUT: ${{ inputs.publish }}
+        run: |
+          echo "event_name=$GITHUB_EVENT_NAME ref=$GITHUB_REF ref_type=$GITHUB_REF_TYPE"
+          echo "publish input=$PUBLISH_INPUT version=$(sed -nE 's/^version = "([^"]+)".*/\1/p' moon.mod | head -1)"
+
+      - name: Install MoonBit toolchain (latest)
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> $GITHUB_PATH
+          "$HOME/.moon/bin/moon" version
+
+      - name: Preflight credentials present (values never printed)
+        env:
+          MOON_TOKEN: ${{ secrets.MOON_TOKEN }}
+          MOON_USERNAME: ${{ secrets.MOON_USERNAME }}
+        run: |
+          [ -n "$MOON_TOKEN" ] || {
+            echo "::error::secrets.MOON_TOKEN 没到位（org 级 secret 需把本仓放进可见范围，或在本仓建同名）"
+            exit 1
+          }
+          [ -n "$MOON_USERNAME" ] || { echo "::error::secrets.MOON_USERNAME 没到位"; exit 1; }
+          echo "凭证到位：token 长度 ${#MOON_TOKEN}（值不外泄），用户名 $MOON_USERNAME"
+
+      - name: Write mooncakes credentials
+        env:
+          MOON_TOKEN: ${{ secrets.MOON_TOKEN }}
+          MOON_USERNAME: ${{ secrets.MOON_USERNAME }}
+        run: |
+          mkdir -p "$HOME/.moon"
+          printf '{"token":"%s","username":"%s"}\n' "$MOON_TOKEN" "$MOON_USERNAME" \
+            > "$HOME/.moon/credentials.json"
+
+      - name: Update index and install dependencies
+        run: |
+          moon update
+          moon install
+
+      - name: Publish (re-entrant, skip if the index already has this version)
+        run: bash .github/scripts/publish-if-absent.sh . mldong/moon-cos
+
+      # 上传 200／版本可见／用户装得到是三件事，这一步只认第三件：按新用户的路径建空工程，用
+      # `moon add`（不给版本号，由注册表解析）引刚发上去的那一代，把解析到的 pin 打进 log，
+      # 再真编译真跑。
+      # 为什么不用 `import { "mldong/moon-cos" }`：这个版本的 moon.mod 拒绝无版本号的 registry 依赖
+      # （实测 "moon.mod only supports versioned registry dependencies in import"）。
+      # 探针里的表达式抄自已过门禁的 README 最小用法块，不是现编的 API；整块不打网络——
+      # 这一档要证的是"装得到并且算得出同一条签名串"，真端点由上面那两条腿负责。
+      # pin 那一行用 grep -oE 现读，**别把日志里的掩码串（***）抄进模式**——那是上一轮踩过的死格。
+      - name: Consumer leg — install the just-published version and build against it
+        run: |
+          export MOON_HOME="$HOME/.moon"
+          moon update
+          probe="$RUNNER_TEMP/consumer-cos"
+          rm -rf "$probe"; mkdir -p "$probe/lib"
+          printf 'name = "mldong/consumer_probe_cos"\nversion = "0.0.0"\npreferred_target = "wasm"\n' > "$probe/moon.mod"
+          printf 'import {\n  "mldong/moon-cos/cos" @sdk,\n  "mldong/moon-cos/auth" @cosauth,\n  "mldong/moon-cos/config" @cosconfig,\n}\n' > "$probe/lib/moon.pkg"
+          printf 'test "the just-published module installs and works" {\n  let credentials = @cosauth.Credentials::new("AKIDtestid00000000000000000000", "testSecretKey0123456789abcdef")\n  let signed = @cosauth.authorization(credentials, @cosauth.RequestToSign::{\n    verb: "GET",\n    path: "/note.txt",\n    query: [("acl", "")],\n    headers: [("host", "examplebucket-1250000000.cos.ap-guangzhou.myqcloud.com")],\n  }, @cosauth.window_at(1760000000000L, 600L))\n  assert_true(signed.has_prefix("q-sign-algorithm=sha1&q-ak=AKIDtestid00000000000000000000"))\n  assert_true(signed.contains("&q-header-list=host&q-url-param-list=acl"))\n  let config = @cosconfig.Config::new("ap-guangzhou", credentials)\n  assert_eq(config.host("examplebucket-1250000000"), "examplebucket-1250000000.cos.ap-guangzhou.myqcloud.com")\n  let _ = @sdk.CannedAcl::PublicRead.text()\n}\n' > "$probe/lib/probe_test.mbt"
+          cd "$probe"
+          # 发布后索引与制品的传播有尾（上传 200 ≠ 装得到），故重试 3 次；用了几次才装到进 summary。
+          a=1
+          until moon add mldong/moon-cos; do
+            if [ "$a" -ge 3 ]; then
+              echo "::error::连试 3 次都从注册表装不到刚发上去的 mldong/moon-cos —— 这次是真没装得到"
+              exit 1
+            fi
+            a=$((a + 1)); moon update >/dev/null 2>&1 || true; sleep 20
+          done
+          echo "consumer leg 安装所用尝试次数：$a / 3" >> "$GITHUB_STEP_SUMMARY"
+          echo "注册表解析到的 pin：$(grep -oE 'mldong/moon-cos@[0-9.]*' moon.mod | head -1)"
+          moon test --target wasm --no-render
