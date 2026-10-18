@@ -216,7 +216,8 @@ fn is_signable_header(lowered : String) -> Bool {
 ///|
 /// 只留白名单内的头。`sign_host=false` 那一档是给自定义域名（CNAME／CDN 前置）留的口子：
 /// 原生签名默认把 `Host` 算进去，换了访问域名签名就跟着变，参照实现自己也只写了
-/// "可能失败或有安全风险"——这一档能不能通属实测（阶段 H 卡 §2.4 的 M4／M5）。
+/// "可能失败或有安全风险"。实测那一半：备案后的自定义域名在 80 端口能路由进桶，
+/// 但 443 的证书名盖不住；签虚主机的预签名换域名直接拒，只有不签 `Host` 的那条能跨域名用。
 fn signable_headers(
   headers : Array[(String, String)],
   sign_host~ : Bool,

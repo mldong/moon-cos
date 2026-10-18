@@ -99,7 +99,7 @@ pub fn Config::url_of(
 ///|
 /// 签名里的 path：`/` 或 `/<key>`，**解码态原样**（非 ASCII 就直接进签名串）。
 /// 这是本家协议最反直觉的一条——签的是这一串，发出去的是 `encode_key` 那一串。
-/// 两处是否被服务端一致接受属实测档（阶段 H 卡 §2.4 的 M2），别照 SigV4/OSS V4 的习惯编码。
+/// 别照 SigV4/OSS V4 的习惯编码：真桶实测过含中文、空格、`%`、`+`、`&` 的键，两处被一致接受。
 pub fn path_of(key : String) -> String {
   if key.is_empty() {
     "/"

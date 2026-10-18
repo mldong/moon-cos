@@ -4,7 +4,8 @@
 /// 就还原成签名时那串，参照实现（Python `get_presigned_url`）同样是"拆开后 urlencode"。
 ///
 /// 有效期靠 `q-sign-time` 的 `start;end` 自述，**没有** `X-Amz-Expires` 那样的独立参数；
-/// 上限没有文档数字（阶段 H 卡 §2.4 的 M3），所以这里不自创一个顶，只拒"窗口本身不成立"。
+/// 上限没有文档数字（实测 604801 秒照样签得出、也照样能用），所以这里不自创一个顶，
+/// 只拒"窗口本身不成立"。
 ///
 /// 只做"拆开七个字段"这一种形态：Python 那份明确拒绝把七个字段合并进单个 `sign=` 的旧形态
 /// （`fusion-io gateway only accepts split q-sign-* query parameters`）。
