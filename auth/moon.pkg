@@ -1,0 +1,8 @@
+import {
+  "mldong/moon-cos/error",
+  "mldong/moon-hutool/digest",
+  "mldong/moon-hutool/date",
+  "moonbitlang/core/encoding/percent",
+}
+
+supported_targets = "wasm+native+js"
