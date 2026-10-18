@@ -453,6 +453,39 @@ async test "原生 ACL 读写：写公有读真生效，改回私有匿名即拒
 }
 
 ///|
+/// 换错密钥的那一发：整条签名面唯一"服务端认不认这把钥匙"的负判据。
+/// 从真 SK 改一个字符得到，值本身从不打印，只打印状态码与 Code。
+async test "错密钥必须被拒，且拒在签名上而不是别处" {
+  match live_env() {
+    None => skip_note()
+    Some(environment) => {
+      let chars = environment.1.to_array()
+      let last = chars.length() - 1
+      let flipped = if chars[last] == 'a' { "b" } else { "a" }
+      let wrong_sk = environment.1[0:last].to_owned() +
+        flipped +
+        environment.1[last + 1:chars.length()].to_owned()
+      let client = build(environment.0, wrong_sk, region())
+      let note = try {
+        let _ = client.put_object(
+          bucket(),
+          prefix("wrongskey") + "/never.txt",
+          @utf8.encode("不该落盘"),
+        )
+        "no-error"
+      } catch {
+        @error.CosError::Service(details) =>
+          "status=" + details.status.to_string() + " code=<" + details.code + ">"
+        err => cos_text(err)
+      }
+      println("错密钥读数=" + note)
+      assert_true(note.has_prefix("status=403"))
+      assert_true(!note.has_prefix("status=403 code=<>"))
+    }
+  }
+}
+
+///|
 async test "服务级列举与错区域的读数（M12）" {
   match live_env() {
     None => skip_note()
