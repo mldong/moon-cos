@@ -475,7 +475,11 @@ async test "错密钥必须被拒，且拒在签名上而不是别处" {
         "no-error"
       } catch {
         @error.CosError::Service(details) =>
-          "status=" + details.status.to_string() + " code=<" + details.code + ">"
+          "status=" +
+          details.status.to_string() +
+          " code=<" +
+          details.code +
+          ">"
         err => cos_text(err)
       }
       println("错密钥读数=" + note)
