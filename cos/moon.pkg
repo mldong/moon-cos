@@ -1,0 +1,20 @@
+import {
+  "mldong/moon-cos/auth",
+  "mldong/moon-cos/config",
+  "mldong/moon-cos/error",
+  "mldong/moon-hutool/http" @transport,
+  "mldong/moon-hutool/text",
+  "moonbitlang/core/encoding/percent",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/string",
+}
+
+supported_targets = "wasm+native"
+
+// live 用例要真发请求：端口包 transport 只有契约，hutool 的 http 适配层才是碰网络那层；
+// async 给 `async test` 提供运行时，env 只读凭据、绝不打印值。
+import {
+  "moonbitlang/async",
+  "moonbitlang/core/env",
+  "mldong/moon-hutool/digest",
+} for "test"

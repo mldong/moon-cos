@@ -17,4 +17,10 @@ readme = "README.md"
 
 repository = "https://github.com/mldong/moon-cos"
 
-keywords = [ "moonbit", "tencent", "cos", "native-signature", "multipart-upload" ]
+keywords = [
+  "moonbit",
+  "tencent",
+  "cos",
+  "native-signature",
+  "multipart-upload",
+]

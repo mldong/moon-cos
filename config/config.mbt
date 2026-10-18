@@ -17,7 +17,9 @@ pub fn Config::new(
 ) -> Config raise @error.CosError {
   let trimmed = region.trim().to_owned()
   if trimmed.is_empty() {
-    raise @error.CosError::BadParam("region is required: it is the host, not the signature")
+    raise @error.CosError::BadParam(
+      "region is required: it is the host, not the signature",
+    )
   }
   { region: trimmed, credentials, }
 }
@@ -59,12 +61,17 @@ pub fn validate_bucket(bucket : String) -> Unit raise @error.CosError {
     }
   }
   if parts[0].to_owned().is_empty() {
-    raise @error.CosError::BadParam("bucket name is empty before the appid: " + bucket)
+    raise @error.CosError::BadParam(
+      "bucket name is empty before the appid: " + bucket,
+    )
   }
 }
 
 ///|
-pub fn Config::host(self : Config, bucket : String) -> String raise @error.CosError {
+pub fn Config::host(
+  self : Config,
+  bucket : String,
+) -> String raise @error.CosError {
   validate_bucket(bucket)
   bucket + ".cos." + self.region + ".myqcloud.com"
 }
@@ -81,7 +88,11 @@ pub fn encode_key(key : String) -> String {
 }
 
 ///|
-pub fn Config::url_of(self : Config, bucket : String, key : String) -> String raise @error.CosError {
+pub fn Config::url_of(
+  self : Config,
+  bucket : String,
+  key : String,
+) -> String raise @error.CosError {
   "https://" + self.host(bucket) + "/" + encode_key(key)
 }
 

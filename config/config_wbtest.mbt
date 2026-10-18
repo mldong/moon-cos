@@ -1,8 +1,9 @@
 ///|
 /// 寻址与编码这两档本地能钉死的部分：host 模板、桶名形状判据、**签的那一串与发的那一串
 /// 本来就该不同形**。后者只钉形状差，不假装证明服务端接受这个差——那是实测档 M2。
-
 let probe_bucket = "mldong-test-1251150780"
+
+///|
 let probe_region = "ap-guangzhou"
 
 ///|
@@ -17,10 +18,11 @@ fn refused(f : () -> Unit raise @error.CosError) -> String {
     f()
     "no-error"
   } catch {
-    err => match err {
-      @error.CosError::BadParam(m) => "BadParam:" + m
-      _ => "other"
-    }
+    err =>
+      match err {
+        @error.CosError::BadParam(m) => "BadParam:" + m
+        _ => "other"
+      }
   }
 }
 
@@ -37,10 +39,16 @@ test "the host is the long bucket name plus the region, and nothing else" {
 
 ///|
 test "a bucket without an appid is refused locally, not answered with NoSuchBucket remotely" {
-  assert_true(refused(() => validate_bucket("no-appid-here")).has_prefix("BadParam:"))
-  assert_true(refused(() => validate_bucket("name-not-digits")).has_prefix("BadParam:"))
+  assert_true(
+    refused(() => validate_bucket("no-appid-here")).has_prefix("BadParam:"),
+  )
+  assert_true(
+    refused(() => validate_bucket("name-not-digits")).has_prefix("BadParam:"),
+  )
   assert_true(refused(() => validate_bucket("name-")).has_prefix("BadParam:"))
-  assert_true(refused(() => validate_bucket("-1250000000")).has_prefix("BadParam:"))
+  assert_true(
+    refused(() => validate_bucket("-1250000000")).has_prefix("BadParam:"),
+  )
   // 名字自己带连字符是合法的，只有**最后一段**必须是纯数字
   let _ = validate_bucket("my-multi-part-name-1250000000")
 }

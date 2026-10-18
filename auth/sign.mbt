@@ -103,11 +103,7 @@ fn key_form(key : String) -> String {
 fn compare_units(a : String, b : String) -> Int32 {
   let ac = a.to_array()
   let bc = b.to_array()
-  let shared = if ac.length() < bc.length() {
-    ac.length()
-  } else {
-    bc.length()
-  }
+  let shared = if ac.length() < bc.length() { ac.length() } else { bc.length() }
   let mut i = 0
   while i < shared {
     if ac[i] < bc[i] {
@@ -139,6 +135,7 @@ fn compare_pair(a : (String, String), b : (String, String)) -> Int32 {
   }
 }
 
+///|
 fn sort_pairs(pairs : Array[(String, String)]) -> Array[(String, String)] {
   let out = pairs.copy()
   let mut i = 1
@@ -212,8 +209,7 @@ fn is_signable_header(lowered : String) -> Bool {
     "x-cos-content-sha1" => true
     "x-cos-storage-class" => true
     "x-cos-object-type" => true
-    _ =>
-      lowered.has_prefix("x-cos-") || lowered.has_prefix("x-ci-")
+    _ => lowered.has_prefix("x-cos-") || lowered.has_prefix("x-ci-")
   }
 }
 
@@ -240,6 +236,7 @@ fn signable_headers(
   kept
 }
 
+///|
 fn signable_query(query : Array[(String, String)]) -> Array[(String, String)] {
   let kept : Array[(String, String)] = []
   for (key, value) in query {
@@ -257,22 +254,18 @@ pub fn format_string(
   params : String,
   headers : String,
 ) -> String {
-  verb.to_lower() +
-  "\n" +
-  path +
-  "\n" +
-  params +
-  "\n" +
-  headers +
-  "\n"
+  verb.to_lower() + "\n" + path + "\n" + params + "\n" + headers + "\n"
 }
 
 ///|
-/// `StringToSign` 第二行用的是 `q-key-time` 那一串。参照实现两处传的确实是同一个值
+/// `StringToSign` 的第一行恒为 `sha1`：三份官方 SDK 都把这个算法写死（Go 的 `switch` 只有
+/// `"sha1"` 一个 case，default 也回落到 sha1），端点收不收 `sha256` 属实测档，本模块**不提供**
+/// 那一档——没有参照实现的行为不写进公开面。
+/// 第二行用的是 `q-key-time` 那一串。参照实现两处传的确实是同一个值
 /// （Go 的 `calStringToSign(algo, keyTime, formatString)`），而 Authorization 里
 /// `q-sign-time` 与 `q-key-time` 也永远相等——把它们写成不等，签名当场就废。
-pub fn string_to_sign(algorithm : String, key_time : String, format : String) -> String {
-  algorithm + "\n" + key_time + "\n" + @digest.sha1_hex(format) + "\n"
+pub fn string_to_sign(key_time : String, format : String) -> String {
+  "sha1" + "\n" + key_time + "\n" + @digest.sha1_hex(format) + "\n"
 }
 
 ///|
@@ -294,18 +287,21 @@ pub fn authorization(
   credentials : Credentials,
   request : RequestToSign,
   window : Window,
-  algorithm~ : String = "sha1",
   sign_host~ : Bool = true,
 ) -> String {
   let time = window.text()
   let params = canonicalize(signable_query(request.query))
-  let headers = canonicalize(signable_headers(request.headers, sign_host=sign_host))
-  let format = format_string(request.verb, request.path, params.body, headers.body)
-  let to_sign = string_to_sign(algorithm, time, format)
+  let headers = canonicalize(signable_headers(request.headers, sign_host~))
+  let format = format_string(
+    request.verb,
+    request.path,
+    params.body,
+    headers.body,
+  )
+  let to_sign = string_to_sign(time, format)
   let derived = sign_key(credentials.secret_key, time)
   let digest = signature(derived, to_sign)
-  "q-sign-algorithm=" +
-  algorithm +
+  "q-sign-algorithm=sha1" +
   "&q-ak=" +
   credentials.secret_id +
   "&q-sign-time=" +

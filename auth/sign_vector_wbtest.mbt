@@ -5,10 +5,15 @@
 /// 任何一处走偏都会当场红，比只断"签名等于"能多拦住"list 写空了但签名碰巧对"这一类。
 ///
 /// 凭据是编出来的测试值，不是任何真密钥。
-
 let vector_id = "AKIDtestid00000000000000000000"
+
+///|
 let vector_key = "testSecretKey0123456789abcdef"
+
+///|
 let vector_time = "1760000000;1760000600"
+
+///|
 let vector_host = "mldong-test-1251150780.cos.ap-guangzhou.myqcloud.com"
 
 ///|
@@ -49,19 +54,14 @@ test "bucket-level GET on the root signs host only, with an empty parameter list
 ///|
 test "headers outside the signable list are dropped, the ones inside are sorted and encoded" {
   // `content-type` 的值 `text/plain` 编成 `text%2Fplain`；`x-cos-meta-*` 靠前缀进签
-  let got = signed(
-    "PUT",
-    "/moonfs/notes.txt",
-    [],
-    [
-      ("host", vector_host),
-      ("Content-Type", "text/plain"),
-      ("Content-Length", "11"),
-      ("x-cos-meta-tool", "moon-cos"),
-      ("Date", "ignored-by-the-scheme"),
-      ("x-amz-anything", "not-a-cos-header"),
-    ],
-  )
+  let got = signed("PUT", "/moonfs/notes.txt", [], [
+    ("host", vector_host),
+    ("Content-Type", "text/plain"),
+    ("Content-Length", "11"),
+    ("x-cos-meta-tool", "moon-cos"),
+    ("Date", "ignored-by-the-scheme"),
+    ("x-amz-anything", "not-a-cos-header"),
+  ])
   assert_eq(
     got,
     "q-sign-algorithm=sha1&q-ak=" +
@@ -117,12 +117,9 @@ test "parameter values are encoded, keys are lowercased, and the two do not have
 
 ///|
 test "a repeated parameter key appears once per value in the list, and values are sorted raw" {
-  let got = signed(
-    "GET",
-    "/",
-    [("tag", "b"), ("tag", "a"), ("tag", "c")],
-    [("host", "example.cos.ap-guangzhou.myqcloud.com")],
-  )
+  let got = signed("GET", "/", [("tag", "b"), ("tag", "a"), ("tag", "c")], [
+    ("host", "example.cos.ap-guangzhou.myqcloud.com"),
+  ])
   assert_eq(
     got,
     "q-sign-algorithm=sha1&q-ak=" +
@@ -139,12 +136,9 @@ test "a repeated parameter key appears once per value in the list, and values ar
 test "the path enters the signature raw: non-ASCII, space, plus, percent and ampersand all as given" {
   // 签名里是 `/中文 目录/+x%y&z.txt` 原样，一个百分号都没有——这是本家协议最反直觉的一条。
   // 请求行那一侧要编码，两处是否被服务端一致接受是实测档（M2），不在向量档里假装已经证明。
-  let got = signed(
-    "GET",
-    "/中文 目录/+x%y&z.txt",
-    [],
-    [("host", vector_host)],
-  )
+  let got = signed("GET", "/中文 目录/+x%y&z.txt", [], [
+    ("host", vector_host),
+  ])
   assert_eq(
     got,
     "q-sign-algorithm=sha1&q-ak=" +
@@ -197,8 +191,13 @@ test "sign_host=false really takes the host out of the string, and the empty lis
     vector_window(),
     sign_host=false,
   )
-  assert_true(without_host.has_prefix("q-sign-algorithm=sha1&q-ak=" + vector_id))
-  assert_true(without_host.find("&q-header-list=&q-url-param-list=&q-signature=") is Some(_))
+  assert_true(
+    without_host.has_prefix("q-sign-algorithm=sha1&q-ak=" + vector_id),
+  )
+  assert_true(
+    without_host.find("&q-header-list=&q-url-param-list=&q-signature=")
+    is Some(_),
+  )
 }
 
 ///|
@@ -232,7 +231,7 @@ test "a window that ends before it starts is refused locally, before any request
   let refused = try {
     let _ = presign_query(
       credentials,
-      RequestToSign::{ verb: "GET", path: "/", query: [], headers: [] },
+      RequestToSign::{ verb: "GET", path: "/", query: [], headers: [], },
       { start: 1760000600L, end: 1760000000L, },
     )
     "no-error"

@@ -15,16 +15,9 @@ pub fn presign_query(
   sign_host~ : Bool = true,
 ) -> String raise @error.CosError {
   if window.end <= window.start {
-    raise @error.CosError::BadParam(
-      "presigned window must end after it starts",
-    )
+    raise @error.CosError::BadParam("presigned window must end after it starts")
   }
-  let authorization = authorization(
-    credentials,
-    request,
-    window,
-    sign_host=sign_host,
-  )
+  let authorization = authorization(credentials, request, window, sign_host~)
   let parts : Array[String] = []
   for field in authorization.split("&") {
     let text = field.to_owned()

@@ -1,0 +1,30 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "mldong/moon-cos/config"
+
+import {
+  "mldong/moon-cos/auth",
+  "mldong/moon-cos/error",
+}
+
+// Values
+pub fn encode_key(String) -> String
+
+pub fn path_of(String) -> String
+
+pub fn validate_bucket(String) -> Unit raise @error.CosError
+
+// Errors
+
+// Types and methods
+pub struct Config {
+  // private fields
+}
+pub fn Config::credentials(Self) -> @auth.Credentials
+pub fn Config::host(Self, String) -> String raise @error.CosError
+pub fn Config::new(String, @auth.Credentials) -> Self raise @error.CosError
+pub fn Config::region(Self) -> String
+pub fn Config::url_of(Self, String, String) -> String raise @error.CosError
+
+// Type aliases
+
+// Traits

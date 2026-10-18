@@ -1,0 +1,51 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "mldong/moon-cos/auth"
+
+import {
+  "mldong/moon-cos/error",
+}
+
+// Values
+pub fn authorization(Credentials, RequestToSign, Window, sign_host? : Bool) -> String
+
+pub fn cos_encode(String) -> String
+
+pub fn format_string(String, String, String, String) -> String
+
+pub fn now_millis() -> Int64
+
+pub fn presign_query(Credentials, RequestToSign, Window, sign_host? : Bool) -> String raise @error.CosError
+
+pub fn sign_key(String, String) -> String
+
+pub fn signature(String, String) -> String
+
+pub fn string_to_sign(String, String) -> String
+
+pub fn window_at(Int64, Int64) -> Window
+
+// Errors
+
+// Types and methods
+pub struct Credentials {
+  // private fields
+}
+pub fn Credentials::new(String, String) -> Self raise @error.CosError
+pub fn Credentials::secret_id(Self) -> String
+
+pub(all) struct RequestToSign {
+  verb : String
+  path : String
+  query : Array[(String, String)]
+  headers : Array[(String, String)]
+}
+
+pub struct Window {
+  start : Int64
+  end : Int64
+}
+pub fn Window::text(Self) -> String
+
+// Type aliases
+
+// Traits

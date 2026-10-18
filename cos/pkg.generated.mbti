@@ -1,0 +1,132 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "mldong/moon-cos/cos"
+
+import {
+  "mldong/moon-cos/config",
+  "mldong/moon-cos/error",
+  "mldong/moon-hutool/http",
+}
+
+// Values
+pub fn xml_all(String, String) -> Array[String]
+
+pub fn xml_error_code(String) -> String
+
+pub fn xml_escape(String) -> String
+
+pub fn xml_first(String, String) -> String?
+
+pub fn xml_sections(String, String) -> Array[String]
+
+pub fn xml_unescape(String) -> String
+
+// Errors
+
+// Types and methods
+pub(all) struct BucketInfo {
+  name : String
+  location : String
+  creation_date : String
+}
+
+pub(all) enum CannedAcl {
+  Default
+  Private
+  PublicRead
+  PublicReadWrite
+}
+pub fn CannedAcl::text(Self) -> String
+
+pub struct Client {
+  config : @config.Config
+  transport : &@http.Transport
+}
+pub async fn Client::abort_multipart_upload(Self, String, String, String) -> Unit raise @error.CosError
+pub async fn Client::complete_multipart_upload(Self, String, String, String, parts~ : Array[(Int, String)]) -> CompleteResult raise @error.CosError
+pub async fn Client::copy_object(Self, String, String, String, String, metadata? : Array[(String, String)]) -> CopyResult raise @error.CosError
+pub async fn Client::create_multipart_upload(Self, String, String, content_type? : String, metadata? : Array[(String, String)], acl? : CannedAcl, set_acl? : Bool) -> String raise @error.CosError
+pub async fn Client::delete_object(Self, String, String) -> Unit raise @error.CosError
+pub async fn Client::get_object(Self, String, String, range? : String) -> ObjectData raise @error.CosError
+pub async fn Client::get_object_acl(Self, String, String) -> ObjectAcl raise @error.CosError
+pub async fn Client::list_buckets(Self) -> Array[BucketInfo] raise @error.CosError
+pub async fn Client::list_objects(Self, String, prefix? : String, delimiter? : String, marker? : String, max_keys? : Int) -> ObjectListing raise @error.CosError
+pub async fn Client::list_parts(Self, String, String, String) -> PartPage raise @error.CosError
+pub fn Client::new(@config.Config, &@http.Transport) -> Self
+pub fn Client::presigned_get_url(Self, String, String, expires_sec? : Int64) -> String raise @error.CosError
+pub fn Client::presigned_put_url(Self, String, String, expires_sec? : Int64, content_type? : String) -> String raise @error.CosError
+pub async fn Client::put_object(Self, String, String, Bytes, content_type? : String, metadata? : Array[(String, String)], acl? : CannedAcl, set_acl? : Bool) -> PutObjectResult raise @error.CosError
+pub async fn Client::put_object_acl(Self, String, String, CannedAcl) -> Unit raise @error.CosError
+pub async fn Client::stat_object(Self, String, String) -> ObjectStat raise @error.CosError
+pub async fn Client::upload_part(Self, String, String, String, Int, Bytes) -> String raise @error.CosError
+
+pub(all) struct CompleteResult {
+  etag : String
+  body : String
+}
+
+pub(all) struct CopyResult {
+  etag : String
+  body : String
+}
+
+pub(all) struct ObjectAcl {
+  permissions : Array[String]
+  public_read : Bool
+  owner_id : String?
+  body : String
+}
+
+pub(all) struct ObjectData {
+  content_length : Int64
+  content_type : String?
+  metadata : Array[(String, String)]
+  content_range : String?
+  etag : String?
+  body : Bytes
+}
+
+pub(all) struct ObjectInfo {
+  key : String
+  etag : String?
+  size : Int64
+  last_modified : String?
+}
+
+pub(all) struct ObjectListing {
+  objects : Array[ObjectInfo]
+  common_prefixes : Array[String]
+  is_truncated : Bool
+  next_marker : String?
+  encoding_type : String?
+  body : String
+}
+
+pub(all) struct ObjectStat {
+  key : String
+  etag : String?
+  size : Int64
+  last_modified : String?
+  content_type : String?
+  metadata : Array[(String, String)]
+}
+
+pub(all) struct PartInfo {
+  part_number : Int
+  etag : String
+  size : Int64
+  last_modified : String?
+}
+
+pub(all) struct PartPage {
+  parts : Array[PartInfo]
+  is_truncated : Bool
+  next_part_number_marker : String?
+}
+
+pub(all) struct PutObjectResult {
+  etag : String
+}
+
+// Type aliases
+
+// Traits

@@ -1,0 +1,26 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "mldong/moon-cos/error"
+
+// Values
+
+// Errors
+pub(all) suberror CosError {
+  BadParam(String)
+  Network(String)
+  BadResponse(String)
+  Service(ServiceError)
+}
+pub fn CosError::text(Self) -> String
+
+// Types and methods
+pub(all) struct ServiceError {
+  status : Int
+  code : String
+  message : String
+  request_id : String?
+  trace_id : String
+}
+
+// Type aliases
+
+// Traits
