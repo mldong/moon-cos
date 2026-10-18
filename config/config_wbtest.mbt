@@ -1,7 +1,7 @@
 ///|
 /// 寻址与编码这两档本地能钉死的部分：host 模板、桶名形状判据、**签的那一串与发的那一串
 /// 本来就该不同形**。后者只钉形状差，不假装证明服务端接受这个差——那是实测档 M2。
-let probe_bucket = "mldong-test-1251150780"
+let probe_bucket = "examplebucket-1250000000"
 
 ///|
 let probe_region = "ap-guangzhou"
@@ -31,7 +31,7 @@ test "the host is the long bucket name plus the region, and nothing else" {
   let config = probe_config()
   assert_eq(
     config.host(probe_bucket),
-    "mldong-test-1251150780.cos.ap-guangzhou.myqcloud.com",
+    "examplebucket-1250000000.cos.ap-guangzhou.myqcloud.com",
   )
   // 桶名里的 appid 就是寻址的一部分：这里不拆、不补、不另开一个配置项
   assert_eq(config.region(), probe_region)
@@ -84,7 +84,7 @@ test "the signature takes the decoded path: the two forms are deliberately not t
   let config = probe_config()
   assert_eq(
     config.url_of(probe_bucket, key),
-    "https://mldong-test-1251150780.cos.ap-guangzhou.myqcloud.com/" +
+    "https://examplebucket-1250000000.cos.ap-guangzhou.myqcloud.com/" +
     "%E4%B8%AD%E6%96%87%20%E7%9B%AE%E5%BD%95/%2Bx%25y%26z.txt",
   )
 }

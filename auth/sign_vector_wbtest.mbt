@@ -14,7 +14,7 @@ let vector_key = "testSecretKey0123456789abcdef"
 let vector_time = "1760000000;1760000600"
 
 ///|
-let vector_host = "mldong-test-1251150780.cos.ap-guangzhou.myqcloud.com"
+let vector_host = "examplebucket-1250000000.cos.ap-guangzhou.myqcloud.com"
 
 ///|
 fn vector_window() -> Window {
@@ -47,7 +47,7 @@ test "bucket-level GET on the root signs host only, with an empty parameter list
     vector_time +
     "&q-key-time=" +
     vector_time +
-    "&q-header-list=host&q-url-param-list=&q-signature=19b900477b96d0c48806eef74f294f2e5dff6162",
+    "&q-header-list=host&q-url-param-list=&q-signature=7deef6a30e7d8012297e34067dce28b95edc11d9",
   )
 }
 
@@ -71,7 +71,7 @@ test "headers outside the signable list are dropped, the ones inside are sorted 
     "&q-key-time=" +
     vector_time +
     "&q-header-list=content-length;content-type;host;x-cos-meta-tool" +
-    "&q-url-param-list=&q-signature=78005a16cea1ff48799161bc56b2eda461cf608b",
+    "&q-url-param-list=&q-signature=952a368458139642c04f1ed1dba931d588b6a3bf",
   )
 }
 
@@ -88,7 +88,7 @@ test "a value-less sub-resource signs as `acl=`, with the equals sign kept" {
     vector_time +
     "&q-key-time=" +
     vector_time +
-    "&q-header-list=host&q-url-param-list=acl&q-signature=3ad6f0e226a2afa887fb7ab7664da97ed65a46ac",
+    "&q-header-list=host&q-url-param-list=acl&q-signature=f294503855da5ef49cfb745bb7b7cca7486bc5b6",
   )
 }
 
@@ -111,7 +111,7 @@ test "parameter values are encoded, keys are lowercased, and the two do not have
     "&q-key-time=" +
     vector_time +
     "&q-header-list=content-md5;host&q-url-param-list=partnumber;uploadid" +
-    "&q-signature=82a5bec5a3abf595f341f54a69b2daad291719d4",
+    "&q-signature=dbeb7f184b577d6f777118d0e8310fee81a7b245",
   )
 }
 
@@ -147,7 +147,7 @@ test "the path enters the signature raw: non-ASCII, space, plus, percent and amp
     vector_time +
     "&q-key-time=" +
     vector_time +
-    "&q-header-list=host&q-url-param-list=&q-signature=28cf3c6cacfb3013e3cc2974691d6b497f39358a",
+    "&q-header-list=host&q-url-param-list=&q-signature=0bf08fae3b78883609a12ac31f640782201cc0ee",
   )
 }
 
@@ -173,7 +173,7 @@ test "prefix, delimiter and encoding-type all take part in the signature" {
     "&q-key-time=" +
     vector_time +
     "&q-header-list=host&q-url-param-list=delimiter;encoding-type;max-keys;prefix" +
-    "&q-signature=a32020947d820b234bb1ebc46ea714dfe05a22d2",
+    "&q-signature=a71b65dc8a0d62d2a155881d9f2ca2ee344cd5de",
   )
 }
 
@@ -221,7 +221,7 @@ test "the presigned form moves all seven fields into the query and escapes the s
     vector_id +
     "&q-sign-time=1760000000%3B1760000600&q-key-time=1760000000%3B1760000600" +
     "&q-header-list=host&q-url-param-list=acl&q-signature=" +
-    "ef139cb01e879139c4ff9d6e533e73a80984c688",
+    "6630d2c80f8f8c1ab8cf94c28e8fc7b1a26e928b",
   )
 }
 
