@@ -124,9 +124,15 @@ jobs:
           run_live() {
             target=$1; out=$2; a=1
             until moon test --target "$target" -j 1 --no-render > "$out" 2>&1; do
+              # 每红一次就贴一次尾部：这一档的失败行只到错误变体名为止（本版 `Error.to_string()`
+              # 对 suberror 不给载荷），"红在哪一发、那一发跑了多久、每一发之间隔了多久"全在腿
+              # 自己 println 的里程碑里。第 2 次才转绿的轮次同样要留下第 1 次的读数——靠重试混过去
+              # 又不留证据的门禁等于没有门禁。
+              echo "::warning::$target 档第 $a 次红，贴出失败前后的尾部读数"
+              grep -E "FAILED|failed:" "$out" | head -8 || true
+              tail -40 "$out" || true
               if [ "$a" -ge 3 ]; then
                 echo "::error::$target 档连红 3 次，这次不是抖动"
-                grep -E "FAILED|failed:" "$out" | head -8 || true
                 exit 1
               fi
               a=$((a + 1)); sleep 20

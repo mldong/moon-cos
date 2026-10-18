@@ -229,6 +229,99 @@ async test "对象族在真桶上往返，键里的中文/空格/百分号/加�
 }
 
 ///|
+/// 分片这一整档挪进具名件，为的是失败能自报"红在哪一发、那一发跑了多久"：native 档在 CI 上连红
+/// 三次，而失败行只留下一个 `CosError.Network`——哪一发、跑了多久全丢了（本版 `Error.to_string()`
+/// 对 `suberror` 只给变体名，载荷进不去；对断言失败倒是把原话整段保住，所以这里照旧带上它）。
+/// 有了"这一发跑了多少毫秒"，"撞上适配层那道 30 秒默认超时界（`AsyncHttpTransport::new` 的
+/// `timeout~`）"与"连接立刻被断"当场分得开，不必再猜一轮。
+async fn multipart_steps(
+  client : @cos.Client,
+  b : String,
+  root : String,
+) -> Unit {
+  let t0 = @env.now().reinterpret_as_int64()
+  // 两格单元素数组当可变读数：闭包改不动捕获的 `let mut`，而数组是引用语义。
+  let at : Array[String] = ["(还没起步)"]
+  let since : Array[Int64] = [t0]
+  let mark : (String) -> Unit = label => {
+    let now = @env.now().reinterpret_as_int64()
+    at[0] = label
+    since[0] = now
+    println("分片腿 +" + (now - t0).to_string() + "ms：" + label)
+  }
+  try {
+    let key = root + "/big.bin"
+    mark("create_multipart_upload")
+    let upload_id = client.create_multipart_upload(
+      b,
+      key,
+      content_type="application/octet-stream",
+    )
+    println("uploadId 长度=" + upload_id.length().to_string())
+    let piece = filler(1048576)
+    mark("upload_part #1（1 MiB 体）")
+    let one = client.upload_part(b, key, upload_id, 1, piece)
+    mark("upload_part #2（1 MiB 体）")
+    let two = client.upload_part(b, key, upload_id, 2, piece)
+    mark("list_parts")
+    let page = client.list_parts(b, key, upload_id)
+    assert_eq(page.parts.length(), 2)
+    assert_eq(page.parts[0].etag, one)
+    // 每片必须真到 1 MiB：上一轮这条断言没写，filler 少拼了一倍、
+    // 片成 540672 字节，红在 complete 的 EntityTooSmall 上而不是红在造料上。
+    assert_eq(page.parts[0].size, 1048576L)
+    assert_eq(page.parts[1].size, 1048576L)
+    // M8：完成件**不发** Content-MD5。文档摘要说过它 required，而参照实现的 Python 那份
+    // 根本不发——这一发就是裁决：收下来、对象尺寸对得上，才算定案。
+    mark("complete_multipart_upload")
+    let done = client.complete_multipart_upload(b, key, upload_id, parts=[
+      (1, one),
+      (2, two),
+    ])
+    println("M9 读数：完成件 etag=" + done.etag)
+    mark("stat_object")
+    let stat = client.stat_object(b, key)
+    assert_eq(stat.size, 2097152L)
+    mark("delete_object")
+    let _ = client.delete_object(b, key)
+
+    mark("放弃档：create + abort + 查分片")
+    let second = client.create_multipart_upload(b, root + "/abort.bin")
+    let _ = client.abort_multipart_upload(b, root + "/abort.bin", second)
+    let after = try {
+      let _ = client.list_parts(b, root + "/abort.bin", second)
+      "no-error"
+    } catch {
+      err =>
+        match err {
+          @error.CosError::Service(details) =>
+            details.status.to_string() + " " + details.code
+          _ => cos_text(err)
+        }
+    }
+    println("放弃后查分片读数=" + after)
+    assert_true(after.has_prefix("404"))
+  } catch {
+    err => {
+      let now = @env.now().reinterpret_as_int64()
+      let ran = now - since[0]
+      let ms = ran.to_string()
+      let started = (since[0] - t0).to_string()
+      fail(
+        "分片腿红在「" +
+        at[0] +
+        "」这一发（起于 +" +
+        started +
+        "ms，跑了 " +
+        ms +
+        "ms）：" +
+        err.to_string(),
+      )
+    }
+  }
+}
+
+///|
 async test "分片五步与完成件读数（M8、M9）" {
   match live_env() {
     None => skip_note()
@@ -236,49 +329,7 @@ async test "分片五步与完成件读数（M8、M9）" {
       let client = build(environment.0, environment.1, region())
       let b = bucket()
       let root = prefix("multipart")
-      let key = root + "/big.bin"
-      let upload_id = client.create_multipart_upload(
-        b,
-        key,
-        content_type="application/octet-stream",
-      )
-      println("uploadId 长度=" + upload_id.length().to_string())
-      let piece = filler(1048576)
-      let one = client.upload_part(b, key, upload_id, 1, piece)
-      let two = client.upload_part(b, key, upload_id, 2, piece)
-      let page = client.list_parts(b, key, upload_id)
-      assert_eq(page.parts.length(), 2)
-      assert_eq(page.parts[0].etag, one)
-      // 每片必须真到 1 MiB：上一轮这条断言没写，filler 少拼了一倍、
-      // 片成 540672 字节，红在 complete 的 EntityTooSmall 上而不是红在造料上。
-      assert_eq(page.parts[0].size, 1048576L)
-      assert_eq(page.parts[1].size, 1048576L)
-      // M8：完成件**不发** Content-MD5。文档摘要说过它 required，而参照实现的 Python 那份
-      // 根本不发——这一发就是裁决：收下来、对象尺寸对得上，才算定案。
-      let done = client.complete_multipart_upload(b, key, upload_id, parts=[
-        (1, one),
-        (2, two),
-      ])
-      println("M9 读数：完成件 etag=" + done.etag)
-      let stat = client.stat_object(b, key)
-      assert_eq(stat.size, 2097152L)
-      let _ = client.delete_object(b, key)
-
-      let second = client.create_multipart_upload(b, root + "/abort.bin")
-      let _ = client.abort_multipart_upload(b, root + "/abort.bin", second)
-      let after = try {
-        let _ = client.list_parts(b, root + "/abort.bin", second)
-        "no-error"
-      } catch {
-        err =>
-          match err {
-            @error.CosError::Service(details) =>
-              details.status.to_string() + " " + details.code
-            _ => cos_text(err)
-          }
-      }
-      println("放弃后查分片读数=" + after)
-      assert_true(after.has_prefix("404"))
+      multipart_steps(client, b, root)
       assert_no_residue(client, root)
     }
   }
