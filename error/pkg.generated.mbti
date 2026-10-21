@@ -14,7 +14,7 @@ pub fn CosError::text(Self) -> String
 
 // Types and methods
 pub(all) struct ServiceError {
-  status : Int
+  status : Int32
   code : String
   message : String
   request_id : String?
