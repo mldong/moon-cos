@@ -199,6 +199,28 @@ async fn extra_lifecycle_text(client : @cos.Client, bucket : String) -> String {
 }
 
 ///|
+async fn extra_inventory_text(client : @cos.Client, bucket : String) -> String {
+  let items = client.list_bucket_inventories(bucket) catch {
+    err => return "err:" + err.text()
+  }
+  "ok:" + items.length().to_string()
+}
+
+///|
+async fn extra_replication_text(
+  client : @cos.Client,
+  bucket : String,
+) -> String {
+  let config = client.get_bucket_replication(bucket) catch {
+    err => return "err:" + err.text()
+  }
+  match config {
+    Some(_) => "ok:configured"
+    None => "ok:none"
+  }
+}
+
+///|
 async fn extra_policy_text(client : @cos.Client, bucket : String) -> String {
   let policy = client.get_bucket_policy(bucket) catch {
     err => return "err:" + err.text()
@@ -376,6 +398,13 @@ async test "真桶·存储类/自动 MD5/版本与 CORS 读：自命名前缀，
         )
         println("cos bucket referer read=" + extra_referer_text(client, bucket))
         println("cos bucket policy read=" + extra_policy_text(client, bucket))
+        println(
+          "cos bucket replication read=" +
+          extra_replication_text(client, bucket),
+        )
+        println(
+          "cos bucket inventory read=" + extra_inventory_text(client, bucket),
+        )
         println("cos bucket tagging read=" + extra_tagging_text(client, bucket))
         println("cos bucket logging read=" + extra_logging_text(client, bucket))
         println("cos bucket website read=" + extra_website_text(client, bucket))

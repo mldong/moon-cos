@@ -80,9 +80,11 @@ pub async fn Client::create_multipart_upload(Self, String, String, content_type?
 pub async fn Client::delete_bucket(Self, String) -> Unit raise @error.CosError
 pub async fn Client::delete_bucket_cors(Self, String) -> Unit raise @error.CosError
 pub async fn Client::delete_bucket_encryption(Self, String) -> Unit raise @error.CosError
+pub async fn Client::delete_bucket_inventory(Self, String, String) -> Unit raise @error.CosError
 pub async fn Client::delete_bucket_lifecycle(Self, String) -> Unit raise @error.CosError
 pub async fn Client::delete_bucket_policy(Self, String) -> Unit raise @error.CosError
 pub async fn Client::delete_bucket_referer(Self, String) -> Unit raise @error.CosError
+pub async fn Client::delete_bucket_replication(Self, String) -> Unit raise @error.CosError
 pub async fn Client::delete_bucket_tagging(Self, String) -> Unit raise @error.CosError
 pub async fn Client::delete_bucket_website(Self, String) -> Unit raise @error.CosError
 pub async fn Client::delete_object(Self, String, String, if_match? : String) -> Unit raise @error.CosError
@@ -91,10 +93,12 @@ pub async fn Client::delete_objects(Self, String, Array[String], quiet? : Bool) 
 pub async fn Client::get_bucket_acl(Self, String) -> ObjectAcl raise @error.CosError
 pub async fn Client::get_bucket_cors(Self, String) -> Array[CorsRule] raise @error.CosError
 pub async fn Client::get_bucket_encryption(Self, String) -> String? raise @error.CosError
+pub async fn Client::get_bucket_inventory(Self, String, String) -> InventoryConfig? raise @error.CosError
 pub async fn Client::get_bucket_lifecycle(Self, String) -> Array[LifecycleRule] raise @error.CosError
 pub async fn Client::get_bucket_logging(Self, String) -> BucketLoggingStatus raise @error.CosError
 pub async fn Client::get_bucket_policy(Self, String) -> String? raise @error.CosError
 pub async fn Client::get_bucket_referer(Self, String) -> BucketReferer raise @error.CosError
+pub async fn Client::get_bucket_replication(Self, String) -> ReplicationConfig? raise @error.CosError
 pub async fn Client::get_bucket_tagging(Self, String) -> ObjectTagging raise @error.CosError
 pub async fn Client::get_bucket_versioning(Self, String) -> String? raise @error.CosError
 pub async fn Client::get_bucket_website(Self, String) -> WebsiteConfig? raise @error.CosError
@@ -102,6 +106,7 @@ pub async fn Client::get_object(Self, String, String, range? : String, if_match?
 pub async fn Client::get_object_acl(Self, String, String) -> ObjectAcl raise @error.CosError
 pub async fn Client::get_object_tagging(Self, String, String) -> ObjectTagging raise @error.CosError
 pub async fn Client::get_symlink(Self, String, String) -> SymlinkInfo raise @error.CosError
+pub async fn Client::list_bucket_inventories(Self, String) -> Array[InventoryConfig] raise @error.CosError
 pub async fn Client::list_buckets(Self) -> Array[BucketInfo] raise @error.CosError
 pub async fn Client::list_multipart_uploads(Self, String, prefix? : String, delimiter? : String, max_uploads? : Int32, key_marker? : String, upload_id_marker? : String) -> MultipartUploadListing raise @error.CosError
 pub async fn Client::list_objects(Self, String, prefix? : String, delimiter? : String, marker? : String, max_keys? : Int32) -> ObjectListing raise @error.CosError
@@ -113,10 +118,12 @@ pub fn Client::presigned_put_url(Self, String, String, expires_sec? : Int64, con
 pub async fn Client::put_bucket_acl(Self, String, CannedAcl) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_cors(Self, String, Array[CorsRule]) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_encryption(Self, String, algorithm? : String) -> Unit raise @error.CosError
+pub async fn Client::put_bucket_inventory(Self, String, InventoryConfig) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_lifecycle(Self, String, Array[LifecycleRule]) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_logging(Self, String, String, target_prefix? : String) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_policy(Self, String, String) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_referer(Self, String, BucketReferer) -> Unit raise @error.CosError
+pub async fn Client::put_bucket_replication(Self, String, ReplicationConfig) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_tagging(Self, String, Array[ObjectTag]) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_versioning(Self, String, String) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_website(Self, String, String, error_key? : String) -> Unit raise @error.CosError
@@ -158,6 +165,20 @@ pub(all) struct DeleteObjectsResult {
   errors : Array[DeleteObjectFailure]
   body : String
 }
+
+pub(all) struct InventoryConfig {
+  id : String
+  is_enabled : Bool
+  format : String
+  destination_bucket : String
+  destination_prefix : String
+  account_id : String
+  frequency : String
+  included_versions : String
+  filter_prefix : String
+  optional_fields : Array[String]
+}
+pub fn InventoryConfig::new(String, String, format? : String, frequency? : String) -> Self
 
 pub(all) struct LifecycleRule {
   id : String
@@ -266,6 +287,20 @@ pub(all) struct PartPage {
 pub(all) struct PutObjectResult {
   etag : String
 }
+
+pub(all) struct ReplicationConfig {
+  role : String
+  rules : Array[ReplicationRule]
+}
+
+pub(all) struct ReplicationRule {
+  id : String
+  prefix : String
+  status : String
+  destination_bucket : String
+  storage_class : String
+}
+pub fn ReplicationRule::new(String, String, status? : String, prefix? : String) -> Self
 
 pub(all) struct SymlinkInfo {
   target : String?
