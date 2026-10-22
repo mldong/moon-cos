@@ -1,6 +1,6 @@
 name = "mldong/moon-cos"
 
-version = "0.1.2"
+version = "0.1.3"
 
 license = "Apache-2.0"
 
@@ -9,7 +9,7 @@ preferred_target = "wasm"
 description = "Tencent Cloud COS native XML-API client for MoonBit"
 
 import {
-  "mldong/moon-hutool@0.1.6",
+  "mldong/moon-hutool@0.1.7",
   "moonbitlang/async@0.22.5",
 }
 
