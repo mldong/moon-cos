@@ -23,7 +23,7 @@ pub struct Config {
 pub let service_host : String = "service.cos.myqcloud.com"
 
 ///|
-/// 区域端点那一档。scheme 默认 https；`scheme~="http"` 是给代理／内网镜像／抓包这类
+/// 区域端点那一档。scheme 默认 https；`scheme="http"` 是给代理／内网镜像／抓包这类
 /// 非常规路径用的，接真桶没有理由用它。
 pub fn Config::new(
   region : String,
