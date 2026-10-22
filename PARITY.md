@@ -2,8 +2,8 @@
 
 > 协议基线：[COS API 文档](https://cloud.tencent.com/document/product/436/10111)
 > 参考实现：`tencentyun/cos-python-sdk-v5@V1.9.44`（2026-05-29）；交叉核对 Go `v0.7.76`（2026-10-22）
-> 本仓版本：`mldong/moon-cos@0.2.0`
-> 当前公开面：54 个 `Client::` 方法（0.2.0）
+> 本仓版本：`mldong/moon-cos@0.3.0`
+> 当前公开面：57 个 `Client::` 方法（0.3.0）
 > 状态：现有行先记 `已实现`，真桶证据待按基线逐行复核
 
 ## 1. 当前公开面
@@ -53,6 +53,7 @@
 | COS-BKT-015 | 复制（Replication） | — | P1 | 未开始 | 复制 |
 | COS-BKT-014 | 服务端加密（Get/Put/DeleteBucketEncryption） | `get_bucket_encryption` `put_bucket_encryption` `delete_bucket_encryption` | P1 | 已实现 | 读真桶受账号权限 403，未验证 |
 | COS-BKT-010 | 清单/对象锁（Inventory/Object Lock） | — | P1 | 未开始 | 清单、对象锁 |
+| COS-BKT-016 | 桶策略（Get/Put/DeleteBucketPolicy） | `get_bucket_policy` `put_bucket_policy` `delete_bucket_policy` | P1 | 部分真桶 | 读真桶受账号权限 403，未验证；写只落离线件 |
 | COS-BKT-011 | 加速/自定义域/响应控制（Accelerate/Origin-Domain/Response Control） | — | P1 | 未开始 | 加速、自定义域、响应控制 |
 | COS-BKT-012 | 智能分层/配额/桶信息（IntelligentTiering/Quota/Info） | — | P1 | 未开始 | 智能分层、配额、桶信息 |
 
