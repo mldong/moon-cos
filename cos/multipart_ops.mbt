@@ -39,13 +39,20 @@ pub async fn Client::create_multipart_upload(
   metadata~ : Array[(String, String)] = [],
   acl~ : CannedAcl = Private,
   set_acl~ : Bool = false,
+  storage_class~ : String = "",
 ) -> String raise @error.CosError {
   let response = request(
     self,
     "POST",
     bucket~,
     key~,
-    headers=object_headers(content_type~, metadata~, acl~, set_acl~),
+    headers=object_headers(
+      content_type~,
+      metadata~,
+      acl~,
+      set_acl~,
+      storage_class~,
+    ),
     query=[("uploads", "")],
   )
   let body = response_body_text(response.body, response.status)
@@ -69,13 +76,24 @@ pub async fn Client::upload_part(
   upload_id : String,
   part_number : Int32,
   data : Bytes,
+  content_md5~ : String = "",
+  compute_md5~ : Bool = false,
 ) -> String raise @error.CosError {
+  if compute_md5 && !content_md5.is_empty() {
+    raise @error.BadParam("content_md5 and compute_md5 are mutually exclusive")
+  }
+  let md5 = if compute_md5 { content_md5_of(data) } else { content_md5 }
+  let headers : Array[(String, String)] = []
+  if !md5.is_empty() {
+    headers.push(("content-md5", md5))
+  }
   let response = request(
     self,
     "PUT",
     bucket~,
     key~,
     query=[("partNumber", part_number.to_string()), ("uploadId", upload_id)],
+    headers~,
     body=@transport.RequestBody::Bytes(data),
   )
   discard_body(response)

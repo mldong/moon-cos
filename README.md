@@ -176,10 +176,30 @@ moon add mldong/moon-cos
   一位也是 403。两条负判据各自独立成立。
 - **2xx 且不需要正文的响应一律读尽再关**：传输层的连接池只收"读尽的线"，不读也不关等于把一条 TLS
   连接晾在外面，后面的请求会整等 30 秒再报 timeout（隔壁 `moon-oss` 真桶实测过的教训，这条纪律照带）。
-- **这一代没有的东西**：桶族（建／删／配置）刻意不做，那是账号级动作；没有 STS 临时凭据
-  （`Credentials` 只有永久密钥两把，`x-cos-security-token` 那族靠前缀自动入签，本仓不提供注入点）；
-  没有"一条式自动切分片"的大文件上传，分片由调用侧按五步走；没有上传进度回调；没有批量删除；
-  响应头里的 `x-cos-hash-crc64ecma` 读得到但没端上公开面。
+- **这一代没有的东西**：没有 STS 临时凭据（`Credentials` 只有永久密钥两把，
+  `x-cos-security-token` 那族靠前缀自动入签，本仓不提供注入点）；没有"一条式自动切分片"的
+  大文件上传，分片由调用侧按五步走；没有上传进度回调。桶 CRUD、批量删除、标签、条件请求、
+  CRC64 读回、软链接与桶配置族已端上公开面，真桶读数与未验证项见 [PARITY.md](PARITY.md)。
+
+## 开发进度
+
+状态词：**已实现**（有公开件且真桶跑过）、**部分实现**（子集真桶跑过，其余只有离线件）、
+**待开发**（公开面里零命中）、**不适用**（协议里没这一族）。
+
+| 能力 | 本 SDK 的件 | 状态 |
+|---|---|---|
+| 对象读写／删除／元数据 | `put_object` `get_object` `delete_object` `stat_object` | 已实现 |
+| 列举／分片五步／预签名／对象 ACL | `list_objects`、分片五件、`presigned_*`、`put/get_object_acl` | 已实现 |
+| 批量删除／对象标签／条件请求 | `delete_objects`、标签三件、`if_match~` 等 | 已实现 |
+| 存储类／自动 MD5／CRC64 | `storage_class~`、`compute_md5~`、`object_crc64` | 已实现 |
+| 追加写／软链接 | `append_object`、`put_symlink` `get_symlink` | 部分实现（软链接建链 403） |
+| 归档解冻 | `restore_object` | 部分实现（仅离线件） |
+| 桶基础 | `create_bucket` `delete_bucket` `bucket_exists` | 部分实现（建/删未跑真桶） |
+| 桶配置读 | ACL／版本／CORS／标签／日志／网站／加密／生命周期／防盗链 | 部分实现（账号权限 403） |
+| 桶配置写 | 上述各族的 `put_*` / `delete_*` | 部分实现（只有离线件） |
+| STS／自动分片／进度回调 | 无对应件 | 待开发 |
+
+完整对标台账：[PARITY.md](PARITY.md)。
 
 ## 许可
 

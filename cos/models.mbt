@@ -25,6 +25,7 @@ pub(all) struct ObjectInfo {
   etag : String?
   size : Int64
   last_modified : String?
+  storage_class : String?
 }
 
 ///|
@@ -36,6 +37,7 @@ pub(all) struct ObjectStat {
   size : Int64
   last_modified : String?
   content_type : String?
+  storage_class : String?
   metadata : Array[(String, String)]
 }
 
@@ -57,6 +59,71 @@ pub(all) struct ObjectListing {
 ///|
 pub(all) struct CopyResult {
   etag : String
+  body : String
+}
+
+///|
+/// 批量删除里单条失败。成功与失败按 `<Deleted>` / `<Error>` 两族分开收。
+pub(all) struct DeleteObjectFailure {
+  key : String
+  code : String
+  message : String
+}
+
+///|
+/// `POST /?delete` 的读数。`quiet=true` 时服务端可以不回正文。
+pub(all) struct DeleteObjectsResult {
+  deleted : Array[String]
+  errors : Array[DeleteObjectFailure]
+  body : String
+}
+
+///|
+/// `UploadPartCopy` 的读数。ETag 优先取 XML，回包没有 XML 时退回响应头。
+pub(all) struct UploadPartCopyResult {
+  etag : String
+  last_modified : String?
+  body : String
+}
+
+///|
+/// 一条未完成的分片任务。
+pub(all) struct MultipartUploadInfo {
+  key : String
+  upload_id : String
+  initiated : String?
+}
+
+///|
+/// `GET /?uploads` 的一页。`next_*` 为空表示没有下一页。
+pub(all) struct MultipartUploadListing {
+  uploads : Array[MultipartUploadInfo]
+  common_prefixes : Array[String]
+  is_truncated : Bool
+  next_key_marker : String?
+  next_upload_id_marker : String?
+  body : String
+}
+
+///|
+/// 对象标签的一对键值。COS 上限 10 对，键在对象内唯一。
+pub(all) struct ObjectTag {
+  key : String
+  value : String
+}
+
+///|
+/// `GET /<key>?tagging` 的读数。
+pub(all) struct ObjectTagging {
+  tags : Array[ObjectTag]
+  body : String
+}
+
+///|
+/// `POST /<key>?append&position=N` 的读数。
+pub(all) struct AppendResult {
+  next_position : Int64?
+  etag : String?
   body : String
 }
 

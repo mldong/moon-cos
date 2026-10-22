@@ -8,6 +8,12 @@ import {
 }
 
 // Values
+pub fn crc64_decimal(UInt64) -> String
+
+pub fn crc64_xz(Bytes) -> UInt64
+
+pub fn symlink_headers(String, forbid_overwrite? : Bool, storage_class? : String, acl? : String) -> Array[(String, String)]
+
 pub fn xml_all(String, String) -> Array[String]
 
 pub fn xml_error_code(String) -> String
@@ -23,10 +29,33 @@ pub fn xml_unescape(String) -> String
 // Errors
 
 // Types and methods
+pub(all) struct AppendResult {
+  next_position : Int64?
+  etag : String?
+  body : String
+}
+
 pub(all) struct BucketInfo {
   name : String
   location : String
   creation_date : String
+}
+
+pub(all) struct BucketLogging {
+  target_bucket : String
+  target_prefix : String
+}
+
+pub(all) struct BucketLoggingStatus {
+  enabled : BucketLogging?
+  body : String
+}
+
+pub(all) struct BucketReferer {
+  status : String?
+  referer_type : String?
+  domains : Array[String]
+  empty_refer_configuration : String?
 }
 
 pub(all) enum CannedAcl {
@@ -42,22 +71,60 @@ pub struct Client {
   transport : &@http.Transport
 }
 pub async fn Client::abort_multipart_upload(Self, String, String, String) -> Unit raise @error.CosError
+pub async fn Client::append_object(Self, String, String, Bytes, position? : Int64, content_type? : String) -> AppendResult raise @error.CosError
+pub async fn Client::bucket_exists(Self, String) -> Bool raise @error.CosError
 pub async fn Client::complete_multipart_upload(Self, String, String, String, parts~ : Array[(Int32, String)]) -> CompleteResult raise @error.CosError
-pub async fn Client::copy_object(Self, String, String, String, String, metadata? : Array[(String, String)]) -> CopyResult raise @error.CosError
-pub async fn Client::create_multipart_upload(Self, String, String, content_type? : String, metadata? : Array[(String, String)], acl? : CannedAcl, set_acl? : Bool) -> String raise @error.CosError
-pub async fn Client::delete_object(Self, String, String) -> Unit raise @error.CosError
-pub async fn Client::get_object(Self, String, String, range? : String) -> ObjectData raise @error.CosError
+pub async fn Client::copy_object(Self, String, String, String, String, metadata? : Array[(String, String)], storage_class? : String, copy_source_if_match? : String, copy_source_if_none_match? : String, copy_source_if_modified_since? : String, copy_source_if_unmodified_since? : String) -> CopyResult raise @error.CosError
+pub async fn Client::create_bucket(Self, String, acl? : String, storage_class? : String) -> Unit raise @error.CosError
+pub async fn Client::create_multipart_upload(Self, String, String, content_type? : String, metadata? : Array[(String, String)], acl? : CannedAcl, set_acl? : Bool, storage_class? : String) -> String raise @error.CosError
+pub async fn Client::delete_bucket(Self, String) -> Unit raise @error.CosError
+pub async fn Client::delete_bucket_cors(Self, String) -> Unit raise @error.CosError
+pub async fn Client::delete_bucket_encryption(Self, String) -> Unit raise @error.CosError
+pub async fn Client::delete_bucket_lifecycle(Self, String) -> Unit raise @error.CosError
+pub async fn Client::delete_bucket_referer(Self, String) -> Unit raise @error.CosError
+pub async fn Client::delete_bucket_tagging(Self, String) -> Unit raise @error.CosError
+pub async fn Client::delete_bucket_website(Self, String) -> Unit raise @error.CosError
+pub async fn Client::delete_object(Self, String, String, if_match? : String) -> Unit raise @error.CosError
+pub async fn Client::delete_object_tagging(Self, String, String) -> Unit raise @error.CosError
+pub async fn Client::delete_objects(Self, String, Array[String], quiet? : Bool) -> DeleteObjectsResult raise @error.CosError
+pub async fn Client::get_bucket_acl(Self, String) -> ObjectAcl raise @error.CosError
+pub async fn Client::get_bucket_cors(Self, String) -> Array[CorsRule] raise @error.CosError
+pub async fn Client::get_bucket_encryption(Self, String) -> String? raise @error.CosError
+pub async fn Client::get_bucket_lifecycle(Self, String) -> Array[LifecycleRule] raise @error.CosError
+pub async fn Client::get_bucket_logging(Self, String) -> BucketLoggingStatus raise @error.CosError
+pub async fn Client::get_bucket_referer(Self, String) -> BucketReferer raise @error.CosError
+pub async fn Client::get_bucket_tagging(Self, String) -> ObjectTagging raise @error.CosError
+pub async fn Client::get_bucket_versioning(Self, String) -> String? raise @error.CosError
+pub async fn Client::get_bucket_website(Self, String) -> WebsiteConfig? raise @error.CosError
+pub async fn Client::get_object(Self, String, String, range? : String, if_match? : String, if_none_match? : String, if_modified_since? : String, if_unmodified_since? : String) -> ObjectData raise @error.CosError
 pub async fn Client::get_object_acl(Self, String, String) -> ObjectAcl raise @error.CosError
+pub async fn Client::get_object_tagging(Self, String, String) -> ObjectTagging raise @error.CosError
+pub async fn Client::get_symlink(Self, String, String) -> SymlinkInfo raise @error.CosError
 pub async fn Client::list_buckets(Self) -> Array[BucketInfo] raise @error.CosError
+pub async fn Client::list_multipart_uploads(Self, String, prefix? : String, delimiter? : String, max_uploads? : Int32, key_marker? : String, upload_id_marker? : String) -> MultipartUploadListing raise @error.CosError
 pub async fn Client::list_objects(Self, String, prefix? : String, delimiter? : String, marker? : String, max_keys? : Int32) -> ObjectListing raise @error.CosError
 pub async fn Client::list_parts(Self, String, String, String) -> PartPage raise @error.CosError
 pub fn Client::new(@config.Config, &@http.Transport) -> Self
+pub async fn Client::object_crc64(Self, String, String) -> String? raise @error.CosError
 pub fn Client::presigned_get_url(Self, String, String, expires_sec? : Int64) -> String raise @error.CosError
 pub fn Client::presigned_put_url(Self, String, String, expires_sec? : Int64, content_type? : String) -> String raise @error.CosError
-pub async fn Client::put_object(Self, String, String, Bytes, content_type? : String, metadata? : Array[(String, String)], acl? : CannedAcl, set_acl? : Bool) -> PutObjectResult raise @error.CosError
+pub async fn Client::put_bucket_acl(Self, String, CannedAcl) -> Unit raise @error.CosError
+pub async fn Client::put_bucket_cors(Self, String, Array[CorsRule]) -> Unit raise @error.CosError
+pub async fn Client::put_bucket_encryption(Self, String, algorithm? : String) -> Unit raise @error.CosError
+pub async fn Client::put_bucket_lifecycle(Self, String, Array[LifecycleRule]) -> Unit raise @error.CosError
+pub async fn Client::put_bucket_logging(Self, String, String, target_prefix? : String) -> Unit raise @error.CosError
+pub async fn Client::put_bucket_referer(Self, String, BucketReferer) -> Unit raise @error.CosError
+pub async fn Client::put_bucket_tagging(Self, String, Array[ObjectTag]) -> Unit raise @error.CosError
+pub async fn Client::put_bucket_versioning(Self, String, String) -> Unit raise @error.CosError
+pub async fn Client::put_bucket_website(Self, String, String, error_key? : String) -> Unit raise @error.CosError
+pub async fn Client::put_object(Self, String, String, Bytes, content_type? : String, metadata? : Array[(String, String)], acl? : CannedAcl, set_acl? : Bool, storage_class? : String, content_md5? : String, compute_md5? : Bool, if_match? : String, if_none_match? : String) -> PutObjectResult raise @error.CosError
 pub async fn Client::put_object_acl(Self, String, String, CannedAcl) -> Unit raise @error.CosError
-pub async fn Client::stat_object(Self, String, String) -> ObjectStat raise @error.CosError
-pub async fn Client::upload_part(Self, String, String, String, Int32, Bytes) -> String raise @error.CosError
+pub async fn Client::put_object_tagging(Self, String, String, Array[ObjectTag]) -> Unit raise @error.CosError
+pub async fn Client::put_symlink(Self, String, String, String, forbid_overwrite? : Bool, storage_class? : String, acl? : String) -> Unit raise @error.CosError
+pub async fn Client::restore_object(Self, String, String, days? : Int32, tier? : String) -> Unit raise @error.CosError
+pub async fn Client::stat_object(Self, String, String, if_match? : String, if_none_match? : String, if_modified_since? : String, if_unmodified_since? : String) -> ObjectStat raise @error.CosError
+pub async fn Client::upload_part(Self, String, String, String, Int32, Bytes, content_md5? : String, compute_md5? : Bool) -> String raise @error.CosError
+pub async fn Client::upload_part_copy(Self, String, String, String, String, String, Int32, copy_source_range? : String, copy_source_if_match? : String, copy_source_if_none_match? : String, copy_source_if_modified_since? : String, copy_source_if_unmodified_since? : String) -> UploadPartCopyResult raise @error.CosError
 
 pub(all) struct CompleteResult {
   etag : String
@@ -66,6 +133,64 @@ pub(all) struct CompleteResult {
 
 pub(all) struct CopyResult {
   etag : String
+  body : String
+}
+
+pub(all) struct CorsRule {
+  allowed_origins : Array[String]
+  allowed_methods : Array[String]
+  allowed_headers : Array[String]
+  expose_headers : Array[String]
+  max_age_seconds : Int32?
+}
+
+pub(all) struct DeleteObjectFailure {
+  key : String
+  code : String
+  message : String
+}
+
+pub(all) struct DeleteObjectsResult {
+  deleted : Array[String]
+  errors : Array[DeleteObjectFailure]
+  body : String
+}
+
+pub(all) struct LifecycleRule {
+  id : String
+  prefix : String
+  status : String
+  expiration_days : Int32?
+  expiration_date : String?
+  expired_object_delete_marker : Bool?
+  transitions : Array[LifecycleTransition]
+  abort_incomplete_multipart_days : Int32?
+  noncurrent_version_expiration_days : Int32?
+}
+pub fn LifecycleRule::new(String, prefix? : String, status? : String) -> Self
+pub fn LifecycleRule::with_abort_multipart(Self, Int32) -> Self
+pub fn LifecycleRule::with_expiration(Self, days? : Int32?, date? : String?, expired_object_delete_marker? : Bool?) -> Self
+pub fn LifecycleRule::with_noncurrent_expiration(Self, Int32) -> Self
+pub fn LifecycleRule::with_transitions(Self, Array[LifecycleTransition]) -> Self
+
+pub(all) struct LifecycleTransition {
+  days : Int32?
+  date : String?
+  storage_class : String
+}
+
+pub(all) struct MultipartUploadInfo {
+  key : String
+  upload_id : String
+  initiated : String?
+}
+
+pub(all) struct MultipartUploadListing {
+  uploads : Array[MultipartUploadInfo]
+  common_prefixes : Array[String]
+  is_truncated : Bool
+  next_key_marker : String?
+  next_upload_id_marker : String?
   body : String
 }
 
@@ -90,6 +215,7 @@ pub(all) struct ObjectInfo {
   etag : String?
   size : Int64
   last_modified : String?
+  storage_class : String?
 }
 
 pub(all) struct ObjectListing {
@@ -107,7 +233,18 @@ pub(all) struct ObjectStat {
   size : Int64
   last_modified : String?
   content_type : String?
+  storage_class : String?
   metadata : Array[(String, String)]
+}
+
+pub(all) struct ObjectTag {
+  key : String
+  value : String
+}
+
+pub(all) struct ObjectTagging {
+  tags : Array[ObjectTag]
+  body : String
 }
 
 pub(all) struct PartInfo {
@@ -125,6 +262,23 @@ pub(all) struct PartPage {
 
 pub(all) struct PutObjectResult {
   etag : String
+}
+
+pub(all) struct SymlinkInfo {
+  target : String?
+  etag : String?
+  version_id : String?
+}
+
+pub(all) struct UploadPartCopyResult {
+  etag : String
+  last_modified : String?
+  body : String
+}
+
+pub(all) struct WebsiteConfig {
+  index_suffix : String
+  error_key : String?
 }
 
 // Type aliases

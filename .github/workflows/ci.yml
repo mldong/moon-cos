@@ -28,13 +28,13 @@ name: ci
 # 条数与改动同笔更新；对不上先现读再改，严禁拿删断言变绿。
 #
 # 两个断言数字的来历（2026-10-18 本机不带凭据实跑 `moon test --target wasm -j 1 --no-render`）：
-#   · EXPECTED_TESTS   = 那一跑 `Total tests:` 的读数 = 34（25 条本地档 + 9 条 live 档）
+#   · EXPECTED_TESTS   = 那一跑 `Total tests:` 的读数 = 77（63 条本地档 + 14 条 live 档）
 #                      10-21 从 27 抬到 30：自定义域名那一档补了三条离线向量（形状/两档同签名/坏输入）
 #                      10-22 从 30 抬到 34：scheme 抬成显式配置项，补四条离线向量
-#                        （只给 scheme~/前缀与 scheme~ 一致/两处打架/非法值在两档各拒一次）
-#   · EXPECTED_SKIPS   = 同一跑里 `SKIP IS NOT A PASS` 的行数 = 9 = live 腿总数
-#     （对象族往返／分片五步／预签名 GET+PUT／原生 ACL 读写／错密钥必拒／服务级列举与错区域／
-#      M1 sha256 探针／M7 list-type=2 探针／M16 多值参数探针）
+#                      10-22 夜从 34 抬到 77：批删/标签/分片复制列举/条件/存储类/桶 CRUD/ACL/版本/CORS/
+#                        生命周期/防盗链/软链接/CRC64 的离线件，以及三条新的 live 腿
+#   · EXPECTED_SKIPS   = 同一跑里 `SKIP IS NOT A PASS` 的行数 = 14 = live 腿总数
+#     （原 9 条 + 新增的标签/条件/批删、分片复制/列举、存储类/自动 MD5）
 # 这两个数各管一头：**给了 secret 的 CI 跑必须 0 条 SKIP**（CI_EXPECTED_SKIPS），
 # 而 EXPECTED_SKIPS 由"不带凭据那一跑"那一步核——它的含义是"live 腿一条都没少"。
 # 有人加/删 live 腿时要同时改这两个数，且改前先实跑取数，不许推算。
@@ -63,8 +63,8 @@ jobs:
     name: Check / Build / Test (wasm + native, live COS bucket)
     runs-on: ubuntu-latest
     env:
-      EXPECTED_TESTS: "34"
-      EXPECTED_SKIPS: "9"
+      EXPECTED_TESTS: "77"
+      EXPECTED_SKIPS: "14"
       CI_EXPECTED_SKIPS: "0"
     steps:
       - uses: actions/checkout@v4

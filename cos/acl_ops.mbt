@@ -39,6 +39,33 @@ pub async fn Client::get_object_acl(
 ) -> ObjectAcl raise @error.CosError {
   let response = request(self, "GET", bucket~, key~, query=[("acl", "")])
   let body = response_body_text(response.body, response.status)
+  parse_acl(body)
+}
+
+///|
+pub async fn Client::put_bucket_acl(
+  self : Client,
+  bucket : String,
+  acl : CannedAcl,
+) -> Unit raise @error.CosError {
+  let response = request(self, "PUT", bucket~, query=[("acl", "")], headers=[
+    ("x-cos-acl", acl.text()),
+  ])
+  discard_body(response)
+}
+
+///|
+pub async fn Client::get_bucket_acl(
+  self : Client,
+  bucket : String,
+) -> ObjectAcl raise @error.CosError {
+  let response = request(self, "GET", bucket~, query=[("acl", "")])
+  let body = response_body_text(response.body, response.status)
+  parse_acl(body)
+}
+
+///|
+fn parse_acl(body : String) -> ObjectAcl {
   let permissions : Array[String] = []
   let mut public_read = false
   for section in xml_sections(body, "Grant") {

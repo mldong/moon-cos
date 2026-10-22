@@ -31,6 +31,94 @@ pub async fn Client::list_buckets(
 }
 
 ///|
+/// 建桶。账号级动作，不接 `moon-file-storage` 门面；`acl`/`storage_class` 为空就不发头。
+pub async fn Client::create_bucket(
+  self : Client,
+  bucket : String,
+  acl~ : String = "",
+  storage_class~ : String = "",
+) -> Unit raise @error.CosError {
+  if bucket.is_empty() {
+    raise @error.BadParam("create_bucket needs a bucket name")
+  }
+  let response = request(
+    self,
+    "PUT",
+    bucket~,
+    headers=bucket_admin_headers(acl~, storage_class~),
+  )
+  discard_body(response)
+}
+
+///|
+pub async fn Client::delete_bucket(
+  self : Client,
+  bucket : String,
+) -> Unit raise @error.CosError {
+  if bucket.is_empty() {
+    raise @error.BadParam("delete_bucket needs a bucket name")
+  }
+  let response = request(self, "DELETE", bucket~)
+  discard_body(response)
+}
+
+///|
+/// 只读判断：2xx 为真，404 为假。COS 的子账号可能没有 HeadBucket 权限而仍有 ListBucket，
+/// 真桶读数 2026-10-22：`HEAD /` 回 403、`list_objects` 200。403 这一档不能直接读成
+/// "不存在"，所以回退到一页列举；列举也 404 才算不存在，其余错误原样抛。
+pub async fn Client::bucket_exists(
+  self : Client,
+  bucket : String,
+) -> Bool raise @error.CosError {
+  if bucket.is_empty() {
+    raise @error.BadParam("bucket_exists needs a bucket name")
+  }
+  let response = request(self, "HEAD", bucket~) catch {
+    err =>
+      match err {
+        @error.CosError::Service(details) =>
+          if details.status == 404 {
+            return false
+          } else if details.status == 403 {
+            let _ = self.list_objects(bucket, max_keys=1) catch {
+              list_err =>
+                match list_err {
+                  @error.CosError::Service(list_details) =>
+                    if list_details.status == 404 {
+                      return false
+                    } else {
+                      raise list_err
+                    }
+                  _ => raise list_err
+                }
+            }
+            return true
+          } else {
+            raise err
+          }
+        _ => raise err
+      }
+  }
+  discard_body(response)
+  true
+}
+
+///|
+fn bucket_admin_headers(
+  acl~ : String,
+  storage_class~ : String,
+) -> Array[(String, String)] {
+  let headers : Array[(String, String)] = []
+  if !acl.is_empty() {
+    headers.push(("x-cos-acl", acl))
+  }
+  if !storage_class.is_empty() {
+    headers.push(("x-cos-storage-class", storage_class))
+  }
+  headers
+}
+
+///|
 /// 桶内列举。**始终带 `encoding-type=url`**：回包里的 `Key`／`CommonPrefixes><Prefix>`／
 /// `NextMarker` 因此是一次 URL 编码的形态，本函数把它解回来后再交给调用方，
 /// 两侧坐标系与 `put_object` 的 `key` 一致。
@@ -69,6 +157,7 @@ pub async fn Client::list_objects(
       etag: xml_first(section, "ETag"),
       size: parse_int64(or_empty(xml_first(section, "Size"))),
       last_modified: xml_first(section, "LastModified"),
+      storage_class: xml_first(section, "StorageClass"),
     })
   }
   let prefixes : Array[String] = []
