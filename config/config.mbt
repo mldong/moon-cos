@@ -1,32 +1,118 @@
 ///|
-/// COS 的寻址只有一个答案：**虚主机**，host 里带桶名（长命名 `<Name>-<APPID>`），path 里
-/// 只有对象键。path 风格（把桶名放在 path 上）2024-01-01 之后建的桶一律 403
-/// `PathStyleDomainForbidden`，所以这里不给开关——给了也只是多一条会红的配置。
+/// COS 的默认寻址是**虚主机**：host 里带桶名（长命名 `<Name>-<APPID>`），path 里只有对象键。
+/// path 风格（把桶名放在 path 上）2024-01-01 之后建的桶一律 403
+/// `PathStyleDomainForbidden`，所以区域端点这一档不给开关——给了也只是多一条会红的配置。
+///
+/// 另一档是**自定义域名**（[Config::with_domain]）：域名在控制台里已经绑定某一个桶，
+/// 所以 host 逐字用、**不许再拼桶名**。2026-10-21 真桶实测两条：`桶名.<域名>` 根本不解析
+/// （NXDOMAIN），而 `http://<域名>/<key>` 由 `Server: tencent-cos` 亲口应答——即这一档走
+/// 明文是通的，https 要等桶侧把证书绑上（没绑时停在 TLS 握手）。
 ///
 /// 与隔壁 `moon-oss` 的第二处分叉：OSS 签的 CanonicalURI **含桶名**（`/<bucket>/<key>`），
-/// COS 签的就是**请求路径本身**（`/<key>`），桶名只在 host 里。
+/// COS 签的就是**请求路径本身**（`/<key>`），桶名只在 host 里。两条签名都不含 scheme，
+/// 所以 http 与 https 之间换档不动签名面。
 pub struct Config {
   priv region : String
   priv credentials : @auth.Credentials
+  priv scheme : String
+  priv domain : String?
 }
+
+///|
+/// 服务级主机（`GET /` 列桶那一发用）。
+pub let service_host : String = "service.cos.myqcloud.com"
 
 ///|
 pub fn Config::new(
   region : String,
   credentials : @auth.Credentials,
 ) -> Config raise @error.CosError {
+  let trimmed = trim_region(region)
+  { region: trimmed, credentials, scheme: "https", domain: None, }
+}
+
+///|
+/// 自定义域名那一档：`domain` 接受带或不带 scheme 两种写法（`cdn.example.com` /
+/// `http://cdn.example.com`）；没给前缀时默认 `https`——把明文当默认值等于替调用方决定
+/// 一件他可能没打算做的事。带 `//` 之后 authority 为空、或主机后面还带路径尾巴的一律
+/// `BadParam`：那种输入十有八九是把控制台"访问域名"整串粘了过来，静默剥掉会让请求打到
+/// 错误的桶。
+pub fn Config::with_domain(
+  domain : String,
+  region : String,
+  credentials : @auth.Credentials,
+) -> Config raise @error.CosError {
+  let trimmed_region = trim_region(region)
+  let (scheme, host) = split_endpoint(domain)
+  { region: trimmed_region, credentials, scheme, domain: Some(host), }
+}
+
+///|
+fn trim_region(region : String) -> String raise @error.CosError {
   let trimmed = region.trim().to_owned()
   if trimmed.is_empty() {
     raise @error.CosError::BadParam(
       "region is required: it is the host, not the signature",
     )
   }
-  { region: trimmed, credentials, }
+  trimmed
+}
+
+///|
+/// 从 endpoint 串里拆出 scheme 与主机。主机的合法性只判到这里（空 authority、带路径尾巴、
+/// 含空格）：域名解析与证书是服务端与桶侧配置的事，本地不冒充知道。
+fn split_endpoint(endpoint : String) -> (String, String) raise @error.CosError {
+  let trimmed = endpoint.trim().to_owned()
+  if trimmed.is_empty() {
+    raise @error.CosError::BadParam("endpoint is empty")
+  }
+  let scheme = if trimmed.has_prefix("https://") {
+    "https"
+  } else if trimmed.has_prefix("http://") {
+    "http"
+  } else {
+    "https"
+  }
+  let rest = match trimmed.find("://") {
+    None => trimmed
+    Some(cut) => trimmed[cut + 3:trimmed.length()].to_owned()
+  }
+  let host = match rest.find("/") {
+    None => rest
+    Some(cut) => {
+      let tail = rest[cut + 1:rest.length()].to_owned()
+      if !tail.is_empty() {
+        raise @error.CosError::BadParam(
+          "endpoint carries a path after the host: " + rest,
+        )
+      }
+      rest[0:cut].to_owned()
+    }
+  }
+  if host.is_empty() || host.contains(" ") {
+    raise @error.CosError::BadParam("endpoint host is not usable: " + host)
+  }
+  (scheme, host)
 }
 
 ///|
 pub fn Config::region(self : Config) -> String {
   self.region
+}
+
+///|
+/// 发请求时用的 scheme：区域端点档恒为 `https`，域名档由 endpoint 前缀决定。
+pub fn Config::scheme(self : Config) -> String {
+  self.scheme
+}
+
+///|
+/// 这一份 Config 是不是"自定义域名"档。下游（适配层、测试）拿它分档，别拿字符串猜。
+pub fn Config::is_domain_style(self : Config) -> Bool {
+  match self.domain {
+    Some(_) => true
+    None => false
+  }
 }
 
 ///|
@@ -68,12 +154,33 @@ pub fn validate_bucket(bucket : String) -> Unit raise @error.CosError {
 }
 
 ///|
+/// 区域端点上的主机：空桶名是服务级主机，其余一律 `<桶名>.cos.<区域>.myqcloud.com`。
+/// **跨桶的那一发（复制源）永远走这里** —— 自定义域名只绑定它自己那一个桶，
+/// 拿域名去表达"另一个桶"会静默指错地方。
+pub fn Config::canonical_host(
+  self : Config,
+  bucket : String,
+) -> String raise @error.CosError {
+  if bucket.is_empty() {
+    service_host
+  } else {
+    validate_bucket(bucket)
+    bucket + ".cos." + self.region + ".myqcloud.com"
+  }
+}
+
+///|
+/// 这一发要打到哪个主机：域名档逐字用域名（桶名不参与，`<name>-<appid>` 那条校验也
+/// 一并跳过——域名模式下那个串根本不进 host，拿它拦人只会拦掉本来能成的请求），
+/// 其余档走区域端点的虚主机/服务级主机。
 pub fn Config::host(
   self : Config,
   bucket : String,
 ) -> String raise @error.CosError {
-  validate_bucket(bucket)
-  bucket + ".cos." + self.region + ".myqcloud.com"
+  match self.domain {
+    Some(domain) => domain
+    None => self.canonical_host(bucket)
+  }
 }
 
 ///|
@@ -93,7 +200,7 @@ pub fn Config::url_of(
   bucket : String,
   key : String,
 ) -> String raise @error.CosError {
-  "https://" + self.host(bucket) + "/" + encode_key(key)
+  self.scheme + "://" + self.host(bucket) + "/" + encode_key(key)
 }
 
 ///|

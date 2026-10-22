@@ -17,11 +17,9 @@ async fn request(
   body~ : @transport.RequestBody = @transport.RequestBody::Empty,
 ) -> @transport.Response raise @error.CosError {
   let config = client.config
-  let host = if bucket.is_empty() {
-    service_host()
-  } else {
-    config.host(bucket)
-  }
+  // 主机与 scheme 都由 Config 定：区域档是虚主机＋https，自定义域名档逐字用域名；
+  // 空桶名那一档（服务级列桶）也在 Config 里派生，这里不再自己拼分支。
+  let host = config.host(bucket)
   let path = @config.path_of(key)
   let signed = [("host", host)] + headers
   let window = @auth.window_at(@auth.now_millis(), 3600L)
@@ -30,7 +28,7 @@ async fn request(
     @auth.RequestToSign::{ verb, path, query, headers: signed, },
     window,
   )
-  let url = "https://" + host + "/" + @config.encode_key(key)
+  let url = config.scheme() + "://" + host + "/" + @config.encode_key(key)
   let wire_query = wire_query(query)
   let full_url = if wire_query.is_empty() {
     url
@@ -68,9 +66,6 @@ async fn request(
 
 ///|
 /// 服务级列举桶走的是这一个域，不是某个桶的域（参照实现同形）。
-fn service_host() -> String {
-  "service.cos.myqcloud.com"
-}
 
 ///|
 /// 发出去的查询串：键按原样（驼峰保留），值编码；空值渲染成 `k=`。

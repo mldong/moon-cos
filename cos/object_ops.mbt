@@ -112,7 +112,9 @@ pub async fn Client::copy_object(
   key : String,
   metadata~ : Array[(String, String)] = [],
 ) -> CopyResult raise @error.CosError {
-  let source = self.config.host(source_bucket) +
+  // 源永远是区域虚主机那一形：自定义域名只绑定它自己那一个桶，拿域名表达"另一个桶"
+  // 会静默指错地方。域名档下同桶复制实测可用（copy=ok、副本读回逐字节一致）。
+  let source = self.config.canonical_host(source_bucket) +
     "/" +
     @config.encode_key(source_key)
   let response = request(

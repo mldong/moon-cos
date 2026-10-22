@@ -28,7 +28,8 @@ name: ci
 # 条数与改动同笔更新；对不上先现读再改，严禁拿删断言变绿。
 #
 # 两个断言数字的来历（2026-10-18 本机不带凭据实跑 `moon test --target wasm -j 1 --no-render`）：
-#   · EXPECTED_TESTS   = 那一跑 `Total tests:` 的读数 = 27（18 条本地档 + 9 条 live 档）
+#   · EXPECTED_TESTS   = 那一跑 `Total tests:` 的读数 = 30（21 条本地档 + 9 条 live 档）
+#                      10-21 从 27 抬到 30：自定义域名那一档补了三条离线向量（形状/两档同签名/坏输入）
 #   · EXPECTED_SKIPS   = 同一跑里 `SKIP IS NOT A PASS` 的行数 = 9 = live 腿总数
 #     （对象族往返／分片五步／预签名 GET+PUT／原生 ACL 读写／错密钥必拒／服务级列举与错区域／
 #      M1 sha256 探针／M7 list-type=2 探针／M16 多值参数探针）
@@ -60,7 +61,7 @@ jobs:
     name: Check / Build / Test (wasm + native, live COS bucket)
     runs-on: ubuntu-latest
     env:
-      EXPECTED_TESTS: "27"
+      EXPECTED_TESTS: "30"
       EXPECTED_SKIPS: "9"
       CI_EXPECTED_SKIPS: "0"
     steps:

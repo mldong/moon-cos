@@ -61,7 +61,7 @@ fn Client::presigned_url(
     },
     window,
   )
-  let base = "https://" + host + "/" + @config.encode_key(key)
+  let base = config.scheme() + "://" + host + "/" + @config.encode_key(key)
   let extra = wire_query(query)
   let tail = if extra.is_empty() { signed } else { signed + "&" + extra }
   base + "?" + tail
