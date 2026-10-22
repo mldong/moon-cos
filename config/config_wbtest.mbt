@@ -92,8 +92,8 @@ test "the signature takes the decoded path: the two forms are deliberately not t
 ///|
 /// 自定义域名（已绑桶）那一档的形状。真桶依据：`http://<域名>/<key>` 由 `Server: tencent-cos`
 /// 亲口应答（put/stat/读回/预签名/delete 全过），而 `桶名.<域名>` 根本不解析，https 停在
-/// "目标主要名称不正确"的 TLS 握手——所以这一档的三条纪律都得钉住：host 逐字用、scheme 跟着
-/// endpoint 前缀走、区域端点那条不许被带歪。
+/// "目标主要名称不正确"的 TLS 握手——所以这一档的三条纪律都得钉住：host 逐字用、scheme 由
+/// endpoint 前缀或显式 `scheme~` 定（两处冲突就地拒）、区域端点那条不许被带歪。
 fn probe_domain_config(endpoint : String) -> Config raise @error.CosError {
   Config::with_domain(
     endpoint,
@@ -181,4 +181,119 @@ test "a malformed custom domain is refused locally, never silently repaired" {
       )
     }).has_prefix("BadParam:region is required"),
   )
+}
+
+///|
+/// scheme 的两条写法（endpoint 前缀 / 显式 `scheme~`）各自都合法，但只能表达一个意思。
+/// 判据分四种：一致→用它；只写了一处→用那一处；两处都没写→`https`；两处打架→就地拒，
+/// 而不是让后写的那一处悄悄赢（默认值一旦写成 `"https"`，`http://…` 这种合法输入就会被
+/// 误判成冲突，所以"没写"与"写了 https"在类型上必须是两回事）。
+/// 值先 trim 再判，与 endpoint/domain 串同一条规矩；报错文案里报的是**给到的原串**，
+/// 不是 trim 后的那一份。
+fn probe_scheme_config(
+  endpoint : String,
+  scheme : String,
+) -> Config raise @error.CosError {
+  Config::with_domain(
+    endpoint,
+    probe_region,
+    @auth.Credentials::new("AKIDtestid", "testSecretKey"),
+    scheme~,
+  )
+}
+
+///|
+test "an explicit scheme~ is the one that wins when the endpoint says nothing" {
+  let plain = probe_scheme_config("cos.example.com", "http")
+  assert_eq(plain.scheme(), "http")
+  assert_eq(plain.url_of(probe_bucket, "k.txt"), "http://cos.example.com/k.txt")
+  let secure = probe_scheme_config("cos.example.com", "https")
+  assert_eq(secure.scheme(), "https")
+  assert_eq(
+    secure.url_of(probe_bucket, "k.txt"),
+    "https://cos.example.com/k.txt",
+  )
+  // 两处都没写才落 https（默认值是空串，不是 "https"）
+  assert_eq(probe_scheme_config("cos.example.com", "").scheme(), "https")
+  // 与 endpoint 串同一条规矩：先 trim 再判值（这一格常从环境变量里来，带个尾空格
+  // 不该读成"给了一个非法 scheme"）
+  assert_eq(probe_scheme_config("cos.example.com", " http ").scheme(), "http")
+}
+
+///|
+test "the endpoint prefix and scheme~ agree or are refused, never silently reconciled" {
+  // 一致：两种写法同一意思，照用
+  let both_http = probe_scheme_config("http://cos.example.com", "http")
+  assert_eq(both_http.scheme(), "http")
+  let both_https = probe_scheme_config("https://cos.example.com", "https")
+  assert_eq(both_https.scheme(), "https")
+  // 打架：响亮拒，报错里带上两处各自的读法，别让人猜哪一处赢了
+  let wrong_way = refused(() => {
+    let _ = probe_scheme_config("http://cos.example.com", "https")
+  })
+  assert_true(
+    wrong_way.has_prefix("BadParam:scheme conflicts with the endpoint"),
+  )
+  assert_true(wrong_way.contains("prefix-scheme=http scheme=https"))
+  let other_way = refused(() => {
+    let _ = probe_scheme_config("https://cos.example.com", "http")
+  })
+  assert_true(other_way.contains("prefix-scheme=https scheme=http"))
+}
+
+///|
+test "a scheme that is neither http nor https is refused in both addressing modes" {
+  for bad in ["ftp", "HTTP", "http s", "https://"] {
+    let got = refused(() => {
+      let _ = probe_scheme_config("cos.example.com", bad)
+    })
+    assert_true(
+      got.has_prefix("BadParam:scheme must be http or https, got: " + bad),
+    )
+    let region_got = refused(() => {
+      let _ = Config::new(
+        probe_region,
+        @auth.Credentials::new("AKIDtestid", "testSecretKey"),
+        scheme=bad,
+      )
+    })
+    assert_true(
+      region_got.has_prefix(
+        "BadParam:scheme must be http or https, got: " + bad,
+      ),
+    )
+  }
+  // 文案里报的是**给到的原串**：trim 只用来判值，报出来还带着那两个空格，
+  // 才看得清 env 里那一格到底写了什么
+  assert_true(
+    refused(() => {
+      let _ = probe_scheme_config("cos.example.com", " ftp ")
+    }).has_suffix(" ftp "),
+  )
+}
+
+///|
+test "the region endpoint takes scheme~ too, and its default is unchanged" {
+  let credentials = @auth.Credentials::new("AKIDtestid", "testSecretKey")
+  // 默认那一档与抬 `scheme~` 之前逐字相同：老调用点不会因为多了一个可选参数而换协议
+  let default_config = Config::new(probe_region, credentials) catch {
+    e => abort(e.text())
+  }
+  assert_eq(default_config.scheme(), "https")
+  assert_true(!default_config.is_domain_style())
+  assert_eq(
+    default_config.url_of(probe_bucket, "k.txt"),
+    "https://examplebucket-1250000000.cos.ap-guangzhou.myqcloud.com/k.txt",
+  )
+  // 显式明文那一档只服务代理／内网镜像／抓包：host 仍按虚主机派生，scheme 换掉
+  let plain = Config::new(probe_region, credentials, scheme="http") catch {
+    e => abort(e.text())
+  }
+  assert_eq(plain.scheme(), "http")
+  assert_eq(
+    plain.url_of(probe_bucket, "k.txt"),
+    "http://examplebucket-1250000000.cos.ap-guangzhou.myqcloud.com/k.txt",
+  )
+  // 区域端点档没有 endpoint 前缀可冲突：`scheme~` 单独就是最终值
+  assert_eq(plain.host(probe_bucket), default_config.host(probe_bucket))
 }

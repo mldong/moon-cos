@@ -127,9 +127,13 @@ moon add mldong/moon-cos
   取实测 403。要在自定义域名上出 URL，就用 `Config::with_domain` 造这一档的客户端——它签的就是那个
   域名的 Host，实测免凭据取回 **200、34 字节逐字相同**。（`@cosauth.presign_query(..., sign_host=false)`
   那一档仍在 `auth` 层：不绑 Host 的签名跨域名可用，但公开面没端出去，因为上面那条路已经够。）
-- **自定义域名那一档走 http，不走 https**：`with_domain("http://<域名>", region, creds)` 在真桶上
-  对象族与同桶复制全过；`https://` 同一域名卡在 TLS（证书是 `CN=*.cos.<区域>.myqcloud.com`，
-  SAN 不覆盖自定义域名，读数 `目标主要名称不正确`）——**那是桶侧没绑证书，不是签名问题**。
+- **scheme 是一个配置项，两档都能定**：`with_domain("http://<域名>", region, creds)` 与
+  `with_domain("<域名>", region, creds, scheme~="http")` 是同一条路的两种写法；两处都写时必须写同一
+  意思，打架就地 `BadParam`——让后写的那一处悄悄赢，等于把"这一发走不走明文"埋进调用顺序里。
+  都没写才落 `https`。区域端点那一档同样接 `scheme~`，给代理／内网镜像／抓包用，接真桶没有理由用它。
+  真桶读数：域名档走 http 时对象族与同桶复制全过；同一域名换 `https` 卡在 TLS（证书是
+  `CN=*.cos.<区域>.myqcloud.com`，SAN 不覆盖自定义域名，读数 `目标主要名称不正确`）——**那是桶侧没绑
+  证书，不是签名问题**，绑上之后改走 https 不用动代码。签名不含 scheme，换档也不动签名面。
   这一档里 host 逐字用域名、**绝不拼桶名**（`<桶名>.<域名>` 连 DNS 都不解析），所以
   跨桶复制的源永远走 `canonical_host` 那条区域虚主机形。
 - **只实现 `sha1`，且不提供 `sha256`**：`q-sign-algorithm=sha256` 在真桶上实测 **403 拒收**，

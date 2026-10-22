@@ -25,11 +25,11 @@ pub fn Config::canonical_host(Self, String) -> String raise @error.CosError
 pub fn Config::credentials(Self) -> @auth.Credentials
 pub fn Config::host(Self, String) -> String raise @error.CosError
 pub fn Config::is_domain_style(Self) -> Bool
-pub fn Config::new(String, @auth.Credentials) -> Self raise @error.CosError
+pub fn Config::new(String, @auth.Credentials, scheme? : String) -> Self raise @error.CosError
 pub fn Config::region(Self) -> String
 pub fn Config::scheme(Self) -> String
 pub fn Config::url_of(Self, String, String) -> String raise @error.CosError
-pub fn Config::with_domain(String, String, @auth.Credentials) -> Self raise @error.CosError
+pub fn Config::with_domain(String, String, @auth.Credentials, scheme? : String) -> Self raise @error.CosError
 
 // Type aliases
 

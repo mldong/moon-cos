@@ -23,28 +23,34 @@ pub struct Config {
 pub let service_host : String = "service.cos.myqcloud.com"
 
 ///|
+/// 区域端点那一档。scheme 默认 https；`scheme~="http"` 是给代理／内网镜像／抓包这类
+/// 非常规路径用的，接真桶没有理由用它。
 pub fn Config::new(
   region : String,
   credentials : @auth.Credentials,
+  scheme~ : String = "",
 ) -> Config raise @error.CosError {
   let trimmed = trim_region(region)
-  { region: trimmed, credentials, scheme: "https", domain: None, }
+  let chosen = resolve_scheme(None, scheme, "region endpoint")
+  { region: trimmed, credentials, scheme: chosen, domain: None, }
 }
 
 ///|
 /// 自定义域名那一档：`domain` 接受带或不带 scheme 两种写法（`cdn.example.com` /
-/// `http://cdn.example.com`）；没给前缀时默认 `https`——把明文当默认值等于替调用方决定
-/// 一件他可能没打算做的事。带 `//` 之后 authority 为空、或主机后面还带路径尾巴的一律
-/// `BadParam`：那种输入十有八九是把控制台"访问域名"整串粘了过来，静默剥掉会让请求打到
-/// 错误的桶。
+/// `http://cdn.example.com`）；没给前缀又没给 `scheme~` 时默认 `https`——把明文当默认值
+/// 等于替调用方决定一件他可能没打算做的事。带 `//` 之后 authority 为空、或主机后面还带
+/// 路径尾巴的一律 `BadParam`：那种输入十有八九是把控制台"访问域名"整串粘了过来，静默剥掉
+/// 会让请求打到错误的桶。
 pub fn Config::with_domain(
   domain : String,
   region : String,
   credentials : @auth.Credentials,
+  scheme~ : String = "",
 ) -> Config raise @error.CosError {
   let trimmed_region = trim_region(region)
-  let (scheme, host) = split_endpoint(domain)
-  { region: trimmed_region, credentials, scheme, domain: Some(host), }
+  let (prefix, host) = split_endpoint(domain)
+  let chosen = resolve_scheme(prefix, scheme, domain)
+  { region: trimmed_region, credentials, scheme: chosen, domain: Some(host), }
 }
 
 ///|
@@ -59,19 +65,58 @@ fn trim_region(region : String) -> String raise @error.CosError {
 }
 
 ///|
-/// 从 endpoint 串里拆出 scheme 与主机。主机的合法性只判到这里（空 authority、带路径尾巴、
-/// 含空格）：域名解析与证书是服务端与桶侧配置的事，本地不冒充知道。
-fn split_endpoint(endpoint : String) -> (String, String) raise @error.CosError {
+/// scheme 的两种写法（endpoint 前缀 / 显式 `scheme~`）都合法，但只能表达一个意思。
+/// `prefix` 是 `None` 表示串里**没写**前缀（不是写了 https），那种情况由 `given` 定，
+/// 两者都没定才落 `https`。把默认值写成 `"https"` 会把 `http://…` 这种合法输入误判成冲突。
+fn resolve_scheme(
+  prefix : String?,
+  given : String,
+  endpoint_desc : String,
+) -> String raise @error.CosError {
+  let trimmed = given.trim().to_owned()
+  if trimmed.is_empty() {
+    match prefix {
+      None => "https"
+      Some(p) => p
+    }
+  } else if trimmed != "http" && trimmed != "https" {
+    raise @error.CosError::BadParam(
+      "scheme must be http or https, got: " + given,
+    )
+  } else {
+    let prefix_value = match prefix {
+      None => trimmed
+      Some(p) => p
+    }
+    if prefix_value != trimmed {
+      raise @error.CosError::BadParam(
+        "scheme conflicts with the endpoint prefix: endpoint=" +
+        endpoint_desc +
+        " prefix-scheme=" +
+        prefix_value +
+        " scheme=" +
+        trimmed,
+      )
+    }
+    trimmed
+  }
+}
+
+///|
+/// 从 endpoint 串里拆出 **scheme 前缀**（没写就是 `None`，与"写了 https"是两回事）与主机。
+/// 主机的合法性只判到这里（空 authority、带路径尾巴、含空格）：域名解析与证书是服务端与
+/// 桶侧配置的事，本地不冒充知道。
+fn split_endpoint(endpoint : String) -> (String?, String) raise @error.CosError {
   let trimmed = endpoint.trim().to_owned()
   if trimmed.is_empty() {
     raise @error.CosError::BadParam("endpoint is empty")
   }
-  let scheme = if trimmed.has_prefix("https://") {
-    "https"
+  let prefix : String? = if trimmed.has_prefix("https://") {
+    Some("https")
   } else if trimmed.has_prefix("http://") {
-    "http"
+    Some("http")
   } else {
-    "https"
+    None
   }
   let rest = match trimmed.find("://") {
     None => trimmed
@@ -92,7 +137,7 @@ fn split_endpoint(endpoint : String) -> (String, String) raise @error.CosError {
   if host.is_empty() || host.contains(" ") {
     raise @error.CosError::BadParam("endpoint host is not usable: " + host)
   }
-  (scheme, host)
+  (prefix, host)
 }
 
 ///|
@@ -101,7 +146,8 @@ pub fn Config::region(self : Config) -> String {
 }
 
 ///|
-/// 发请求时用的 scheme：区域端点档恒为 `https`，域名档由 endpoint 前缀决定。
+/// 发请求时用的 scheme：两档都可以由调用方定（endpoint 前缀或显式 `scheme~`），都没定才落
+/// `https`。签名不含 scheme，所以这一格换档不动签名面。
 pub fn Config::scheme(self : Config) -> String {
   self.scheme
 }
