@@ -32,6 +32,8 @@ pub struct Credentials {
 }
 pub fn Credentials::new(String, String) -> Self raise @error.CosError
 pub fn Credentials::secret_id(Self) -> String
+pub fn Credentials::security_token(Self) -> String?
+pub fn Credentials::with_security_token(Self, String) -> Self
 
 pub(all) struct RequestToSign {
   verb : String

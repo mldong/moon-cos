@@ -48,6 +48,13 @@ fn Client::presigned_url(
   headers~ : Array[(String, String)] = [],
   query~ : Array[(String, String)] = [],
 ) -> String raise @error.CosError {
+  match self.config.credentials().security_token() {
+    Some(_) =>
+      raise @error.CosError::BadParam(
+        "STS security tokens are not supported in presigned URLs yet",
+      )
+    None => ()
+  }
   let config = self.config
   let host = config.host(bucket)
   let window = @auth.window_at(@auth.now_millis(), expires_sec)

@@ -176,8 +176,8 @@ moon add mldong/moon-cos
   一位也是 403。两条负判据各自独立成立。
 - **2xx 且不需要正文的响应一律读尽再关**：传输层的连接池只收"读尽的线"，不读也不关等于把一条 TLS
   连接晾在外面，后面的请求会整等 30 秒再报 timeout（隔壁 `moon-oss` 真桶实测过的教训，这条纪律照带）。
-- **这一代没有的东西**：没有 STS 临时凭据（`Credentials` 只有永久密钥两把，
-  `x-cos-security-token` 那族靠前缀自动入签，本仓不提供注入点）；没有上传进度回调与断点续传，
+- **STS**：`Credentials::with_security_token` 会把 `x-cos-security-token` 带进请求头；预签名 URL 暂不接受 STS（显式拒）。
+- **这一代没有的东西**：没有上传进度回调与断点续传，
   但 `put_bytes_auto` 已能按阈值自动切分片。桶 CRUD、批量删除、标签、条件请求、
   CRC64 读回、软链接与桶配置族已端上公开面，真桶读数与未验证项见 [PARITY.md](PARITY.md)。
 
@@ -197,7 +197,8 @@ moon add mldong/moon-cos
 | 桶基础 | `create_bucket` `delete_bucket` `bucket_exists` | 部分实现（建/删未跑真桶） |
 | 桶配置读 | ACL／版本／CORS／标签／日志／网站／加密／生命周期／防盗链／策略／复制／清单／对象锁／自定义域／智能分层／响应控制 | 部分实现（账号权限 403） |
 | 桶配置写 | 上述各族的 `put_*` / `delete_*` | 部分实现（只有离线件） |
-| STS／自动分片／进度回调 | 无对应件 | 待开发 |
+| STS 临时凭据 | `Credentials::with_security_token`（请求头；预签名暂不支持） | 部分实现 |
+| 断点续传／进度回调 | 无对应件（自动分片已由 `put_bytes_auto` 覆盖） | 待开发 |
 
 完整对标台账：[PARITY.md](PARITY.md)。
 

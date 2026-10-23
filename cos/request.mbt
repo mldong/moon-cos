@@ -21,6 +21,10 @@ async fn request(
   // 空桶名那一档（服务级列桶）也在 Config 里派生，这里不再自己拼分支。
   let host = config.host(bucket)
   let path = @config.path_of(key)
+  let headers = match config.credentials().security_token() {
+    Some(token) => headers + [("x-cos-security-token", token)]
+    None => headers
+  }
   let signed = [("host", host)] + headers
   let window = @auth.window_at(@auth.now_millis(), 3600L)
   let authorization = @auth.authorization(

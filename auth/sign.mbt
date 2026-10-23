@@ -25,6 +25,7 @@
 pub struct Credentials {
   priv secret_id : String
   priv secret_key : String
+  priv security_token : String?
 }
 
 ///|
@@ -37,12 +38,34 @@ pub fn Credentials::new(
       "credentials need both a SecretId and a SecretKey",
     )
   }
-  { secret_id, secret_key, }
+  { secret_id, secret_key, security_token: None, }
 }
 
 ///|
 pub fn Credentials::secret_id(self : Credentials) -> String {
   self.secret_id
+}
+
+///|
+/// 挂一把 STS 临时令牌；空串视作"不挂"，返回自身。
+pub fn Credentials::with_security_token(
+  self : Credentials,
+  token : String,
+) -> Credentials {
+  if token.is_empty() {
+    self
+  } else {
+    {
+      secret_id: self.secret_id,
+      secret_key: self.secret_key,
+      security_token: Some(token),
+    }
+  }
+}
+
+///|
+pub fn Credentials::security_token(self : Credentials) -> String? {
+  self.security_token
 }
 
 ///|
