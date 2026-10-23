@@ -2,8 +2,8 @@
 
 > 协议基线：[COS API 文档](https://cloud.tencent.com/document/product/436/10111)
 > 参考实现：`tencentyun/cos-python-sdk-v5@V1.9.44`（2026-05-29）；交叉核对 Go `v0.7.76`（2026-10-22）
-> 本仓版本：`mldong/moon-cos@0.16.0`
-> 当前公开面：78 个 `Client::` 方法（0.16.0）
+> 本仓版本：`mldong/moon-cos@0.18.0`
+> 当前公开面：79 个 `Client::` 方法（0.18.0）
 > 状态：现有行先记 `已实现`，真桶证据待按基线逐行复核
 
 ## 1. 当前公开面
@@ -65,7 +65,7 @@
 | ID | 能力 | 状态 | 备注 |
 |---|---|---|---|
 | COS-SEC-001 | STS/CAM 临时凭据（`x-cos-security-token`） | 部分实现 | 请求头 + 预签名查询串（`x-cos-security-token`）都已接；缺 STS 凭据未真桶 |
-| COS-CNV-001 | 一条式自动分片 + 进度回调 | `put_bytes_auto`（`progress~` 按片回调） | 部分真桶 | 真桶绿（分片与回调触发均验证）；断点续传未做 |
+| COS-CNV-001 | 自动分片 + 进度 + 断点续传 | `put_bytes_auto` `put_bytes_resumable`（可外部持久化的分片状态） | 部分真桶 | 2026-10-24 真桶绿（先传第一片再带状态续完）；TransferManager 整体未做 |
 | COS-CNV-002 | TransferManager / 分页器 / 重试策略 | 部分实现 | `list_all_objects` 翻页器已落并真桶绿；进度回调/断点续传未做，重试是操作级重发 |
 
 ### P3 · 可选模块

@@ -816,3 +816,59 @@ async fn extra_select_text(
   }
   "ok:" + @utf8.decode_lossy(records)
 }
+
+///|
+async test "真桶·断点续传：先传第一片，再带状态续完" {
+  match extra_env() {
+    None => extra_skip()
+    Some(env) => {
+      let client = extra_build(env) catch {
+        err => fail("setup: " + err.text())
+      }
+      let bucket = env.3
+      let key = extra_tag() + "-resume.bin"
+      let payload = auto_filler(2621440)
+      let part_size = 1048576
+      let upload_id = client.create_multipart_upload(bucket, key) catch {
+        err => fail("create: " + err.text())
+      }
+      let first = client.upload_part(
+        bucket,
+        key,
+        upload_id,
+        1,
+        payload[0:part_size].to_owned(),
+      ) catch {
+        err => fail("part1: " + err.text())
+      }
+      let resumed = client.put_bytes_resumable(
+        bucket,
+        key,
+        payload,
+        part_size~,
+        threshold=part_size,
+        resume_upload_id=upload_id,
+        resume_offset=part_size,
+        resume_parts=[(1, first)],
+      ) catch {
+        err => fail("resume upload: " + err.text())
+      }
+      if resumed.error is Some(_) {
+        fail("resume upload error: " + resumed.error.unwrap())
+      }
+      let got = client.get_object(bucket, key) catch {
+        err => fail("get after resume: " + err.text())
+      }
+      let ok = got.body.length() == payload.length()
+      extra_cleanup(client, bucket, [key])
+      if !ok {
+        fail(
+          "resume size mismatch: " +
+          got.body.length().to_string() +
+          " != " +
+          payload.length().to_string(),
+        )
+      }
+    }
+  }
+}

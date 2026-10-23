@@ -12,6 +12,8 @@ pub fn crc64_decimal(UInt64) -> String
 
 pub fn crc64_xz(Bytes) -> UInt64
 
+pub fn resume_state_text(String, Int32, Array[(Int32, String)]) -> String
+
 pub fn select_records(Bytes) -> Bytes
 
 pub fn symlink_headers(String, forbid_overwrite? : Bool, storage_class? : String, acl? : String) -> Array[(String, String)]
@@ -141,6 +143,7 @@ pub async fn Client::put_bucket_tagging(Self, String, Array[ObjectTag]) -> Unit 
 pub async fn Client::put_bucket_versioning(Self, String, String) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_website(Self, String, String, error_key? : String) -> Unit raise @error.CosError
 pub async fn Client::put_bytes_auto(Self, String, String, Bytes, part_size? : Int32, threshold? : Int32, content_type? : String, compute_md5? : Bool, progress? : ((Int32, Int32) -> Unit)?) -> PutObjectResult raise @error.CosError
+pub async fn Client::put_bytes_resumable(Self, String, String, Bytes, part_size? : Int32, threshold? : Int32, content_type? : String, resume_upload_id? : String, resume_offset? : Int32, resume_parts? : Array[(Int32, String)], progress? : ((Int32, Int32) -> Unit)?) -> ResumeUpload raise @error.CosError
 pub async fn Client::put_object(Self, String, String, Bytes, content_type? : String, metadata? : Array[(String, String)], acl? : CannedAcl, set_acl? : Bool, storage_class? : String, content_md5? : String, compute_md5? : Bool, if_match? : String, if_none_match? : String) -> PutObjectResult raise @error.CosError
 pub async fn Client::put_object_acl(Self, String, String, CannedAcl) -> Unit raise @error.CosError
 pub async fn Client::put_object_tagging(Self, String, String, Array[ObjectTag]) -> Unit raise @error.CosError
@@ -339,6 +342,12 @@ pub(all) struct ReplicationRule {
   storage_class : String
 }
 pub fn ReplicationRule::new(String, String, status? : String, prefix? : String) -> Self
+
+pub(all) struct ResumeUpload {
+  etag : String?
+  state : String
+  error : String?
+}
 
 pub(all) struct SymlinkInfo {
   target : String?
