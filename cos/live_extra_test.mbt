@@ -199,6 +199,14 @@ async fn extra_lifecycle_text(client : @cos.Client, bucket : String) -> String {
 }
 
 ///|
+async fn extra_domain_text(client : @cos.Client, bucket : String) -> String {
+  let rules = client.get_bucket_domain(bucket) catch {
+    err => return "err:" + err.text()
+  }
+  "ok:" + rules.length().to_string()
+}
+
+///|
 async fn extra_object_lock_text(
   client : @cos.Client,
   bucket : String,
@@ -423,6 +431,7 @@ async test "真桶·存储类/自动 MD5/版本与 CORS 读：自命名前缀，
           "cos bucket object-lock read=" +
           extra_object_lock_text(client, bucket),
         )
+        println("cos bucket domain read=" + extra_domain_text(client, bucket))
         println("cos bucket tagging read=" + extra_tagging_text(client, bucket))
         println("cos bucket logging read=" + extra_logging_text(client, bucket))
         println("cos bucket website read=" + extra_website_text(client, bucket))

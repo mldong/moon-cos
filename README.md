@@ -195,7 +195,7 @@ moon add mldong/moon-cos
 | 追加写／软链接 | `append_object`、`put_symlink` `get_symlink` | 部分实现（软链接建链 403） |
 | 归档解冻 | `restore_object` | 部分实现（仅离线件） |
 | 桶基础 | `create_bucket` `delete_bucket` `bucket_exists` | 部分实现（建/删未跑真桶） |
-| 桶配置读 | ACL／版本／CORS／标签／日志／网站／加密／生命周期／防盗链／策略／复制／清单／对象锁 | 部分实现（账号权限 403） |
+| 桶配置读 | ACL／版本／CORS／标签／日志／网站／加密／生命周期／防盗链／策略／复制／清单／对象锁／自定义域 | 部分实现（账号权限 403） |
 | 桶配置写 | 上述各族的 `put_*` / `delete_*` | 部分实现（只有离线件） |
 | STS／自动分片／进度回调 | 无对应件 | 待开发 |
 

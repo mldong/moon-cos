@@ -79,6 +79,7 @@ pub async fn Client::create_bucket(Self, String, acl? : String, storage_class? :
 pub async fn Client::create_multipart_upload(Self, String, String, content_type? : String, metadata? : Array[(String, String)], acl? : CannedAcl, set_acl? : Bool, storage_class? : String) -> String raise @error.CosError
 pub async fn Client::delete_bucket(Self, String) -> Unit raise @error.CosError
 pub async fn Client::delete_bucket_cors(Self, String) -> Unit raise @error.CosError
+pub async fn Client::delete_bucket_domain(Self, String) -> Unit raise @error.CosError
 pub async fn Client::delete_bucket_encryption(Self, String) -> Unit raise @error.CosError
 pub async fn Client::delete_bucket_inventory(Self, String, String) -> Unit raise @error.CosError
 pub async fn Client::delete_bucket_lifecycle(Self, String) -> Unit raise @error.CosError
@@ -92,6 +93,7 @@ pub async fn Client::delete_object_tagging(Self, String, String) -> Unit raise @
 pub async fn Client::delete_objects(Self, String, Array[String], quiet? : Bool) -> DeleteObjectsResult raise @error.CosError
 pub async fn Client::get_bucket_acl(Self, String) -> ObjectAcl raise @error.CosError
 pub async fn Client::get_bucket_cors(Self, String) -> Array[CorsRule] raise @error.CosError
+pub async fn Client::get_bucket_domain(Self, String) -> Array[DomainRule] raise @error.CosError
 pub async fn Client::get_bucket_encryption(Self, String) -> String? raise @error.CosError
 pub async fn Client::get_bucket_inventory(Self, String, String) -> InventoryConfig? raise @error.CosError
 pub async fn Client::get_bucket_lifecycle(Self, String) -> Array[LifecycleRule] raise @error.CosError
@@ -118,6 +120,7 @@ pub fn Client::presigned_get_url(Self, String, String, expires_sec? : Int64) -> 
 pub fn Client::presigned_put_url(Self, String, String, expires_sec? : Int64, content_type? : String) -> String raise @error.CosError
 pub async fn Client::put_bucket_acl(Self, String, CannedAcl) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_cors(Self, String, Array[CorsRule]) -> Unit raise @error.CosError
+pub async fn Client::put_bucket_domain(Self, String, Array[DomainRule]) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_encryption(Self, String, algorithm? : String) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_inventory(Self, String, InventoryConfig) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_lifecycle(Self, String, Array[LifecycleRule]) -> Unit raise @error.CosError
@@ -167,6 +170,14 @@ pub(all) struct DeleteObjectsResult {
   errors : Array[DeleteObjectFailure]
   body : String
 }
+
+pub(all) struct DomainRule {
+  name : String
+  kind : String
+  status : String
+  forced_replacement : String
+}
+pub fn DomainRule::new(String, kind? : String, status? : String) -> Self
 
 pub(all) struct InventoryConfig {
   id : String
