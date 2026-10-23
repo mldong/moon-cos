@@ -199,7 +199,7 @@ moon add mldong/moon-cos
 | 桶配置读 | ACL／版本／CORS／标签／日志／网站／加密／生命周期／防盗链／策略／复制／清单／对象锁／自定义域／智能分层／响应控制 | 部分实现（账号权限 403） |
 | 桶配置写 | 上述各族的 `put_*` / `delete_*` | 部分实现（只有离线件） |
 | STS 临时凭据 | `Credentials::with_security_token`（请求头与预签名查询串） | 部分实现 |
-| 断点续传／进度回调 | `put_bytes_auto`（进度）/ `put_bytes_resumable`（续传） | 已实现 |
+| 断点续传／进度回调／传输管理器 | `put_bytes_auto`、`put_bytes_resumable`、`TransferManager` | 已实现 |
 
 完整对标台账：[PARITY.md](PARITY.md)。
 

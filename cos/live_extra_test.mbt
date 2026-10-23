@@ -872,3 +872,43 @@ async test "真桶·断点续传：先传第一片，再带状态续完" {
     }
   }
 }
+
+///|
+async test "真桶·TransferManager：自动分片上传并清空状态" {
+  match extra_env() {
+    None => extra_skip()
+    Some(env) => {
+      let client = extra_build(env) catch {
+        err => fail("setup: " + err.text())
+      }
+      let bucket = env.3
+      let key = extra_tag() + "-tm.bin"
+      let payload = auto_filler(2621440)
+      let seen : Array[Int32] = []
+      let manager = @cos.TransferManager::new(
+        client,
+        bucket,
+        part_size=1048576,
+        threshold=1048576,
+        progress=Some(fn(sent, _total) { seen.push(sent) }),
+      )
+      let out = manager.upload(key, payload) catch {
+        err => fail("manager upload: " + err.text())
+      }
+      if out.error is Some(_) {
+        fail("manager upload error: " + out.error.unwrap())
+      }
+      if manager.state().upload_id != "" {
+        fail("manager kept state after success")
+      }
+      let got = client.get_object(bucket, key) catch {
+        err => fail("get after manager upload: " + err.text())
+      }
+      let ok = got.body.length() == payload.length() && seen.length() >= 2
+      extra_cleanup(client, bucket, [key])
+      if !ok {
+        fail("manager upload mismatch")
+      }
+    }
+  }
+}

@@ -7,6 +7,9 @@ pub(all) struct ResumeUpload {
   etag : String?
   state : String
   error : String?
+  resume_upload_id : String
+  resume_offset : Int32
+  resume_parts : Array[(Int32, String)]
 }
 
 ///|
@@ -46,7 +49,14 @@ pub async fn Client::put_bytes_resumable(
   }
   if resume_upload_id.is_empty() && data.length() <= threshold {
     let put = self.put_object(bucket, key, data, content_type~)
-    return ResumeUpload::{ etag: Some(put.etag), state: "", error: None, }
+    return ResumeUpload::{
+      etag: Some(put.etag),
+      state: "",
+      error: None,
+      resume_upload_id: "",
+      resume_offset: 0,
+      resume_parts: [],
+    }
   }
   let mut upload_id = resume_upload_id
   let mut offset = resume_offset
@@ -73,6 +83,9 @@ pub async fn Client::put_bytes_resumable(
           etag: None,
           state: resume_state_text(upload_id, offset, parts),
           error: Some(err.text()),
+          resume_upload_id: upload_id,
+          resume_offset: offset,
+          resume_parts: parts,
         }
     }
     parts.push((number, etag))
@@ -88,7 +101,17 @@ pub async fn Client::put_bytes_resumable(
         etag: None,
         state: resume_state_text(upload_id, offset, parts),
         error: Some(err.text()),
+        resume_upload_id: upload_id,
+        resume_offset: offset,
+        resume_parts: parts,
       }
   }
-  ResumeUpload::{ etag: Some(done.etag), state: "", error: None, }
+  ResumeUpload::{
+    etag: Some(done.etag),
+    state: "",
+    error: None,
+    resume_upload_id: "",
+    resume_offset: 0,
+    resume_parts: [],
+  }
 }
