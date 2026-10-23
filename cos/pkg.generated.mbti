@@ -86,6 +86,7 @@ pub async fn Client::delete_bucket_lifecycle(Self, String) -> Unit raise @error.
 pub async fn Client::delete_bucket_policy(Self, String) -> Unit raise @error.CosError
 pub async fn Client::delete_bucket_referer(Self, String) -> Unit raise @error.CosError
 pub async fn Client::delete_bucket_replication(Self, String) -> Unit raise @error.CosError
+pub async fn Client::delete_bucket_response_control(Self, String) -> Unit raise @error.CosError
 pub async fn Client::delete_bucket_tagging(Self, String) -> Unit raise @error.CosError
 pub async fn Client::delete_bucket_website(Self, String) -> Unit raise @error.CosError
 pub async fn Client::delete_object(Self, String, String, if_match? : String) -> Unit raise @error.CosError
@@ -103,6 +104,7 @@ pub async fn Client::get_bucket_object_lock(Self, String) -> ObjectLockConfig? r
 pub async fn Client::get_bucket_policy(Self, String) -> String? raise @error.CosError
 pub async fn Client::get_bucket_referer(Self, String) -> BucketReferer raise @error.CosError
 pub async fn Client::get_bucket_replication(Self, String) -> ReplicationConfig? raise @error.CosError
+pub async fn Client::get_bucket_response_control(Self, String) -> Array[String] raise @error.CosError
 pub async fn Client::get_bucket_tagging(Self, String) -> ObjectTagging raise @error.CosError
 pub async fn Client::get_bucket_versioning(Self, String) -> String? raise @error.CosError
 pub async fn Client::get_bucket_website(Self, String) -> WebsiteConfig? raise @error.CosError
@@ -131,6 +133,7 @@ pub async fn Client::put_bucket_object_lock(Self, String, ObjectLockConfig) -> U
 pub async fn Client::put_bucket_policy(Self, String, String) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_referer(Self, String, BucketReferer) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_replication(Self, String, ReplicationConfig) -> Unit raise @error.CosError
+pub async fn Client::put_bucket_response_control(Self, String, Array[String]) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_tagging(Self, String, Array[ObjectTag]) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_versioning(Self, String, String) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_website(Self, String, String, error_key? : String) -> Unit raise @error.CosError
