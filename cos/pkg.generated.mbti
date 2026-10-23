@@ -112,6 +112,7 @@ pub async fn Client::get_object(Self, String, String, range? : String, if_match?
 pub async fn Client::get_object_acl(Self, String, String) -> ObjectAcl raise @error.CosError
 pub async fn Client::get_object_tagging(Self, String, String) -> ObjectTagging raise @error.CosError
 pub async fn Client::get_symlink(Self, String, String) -> SymlinkInfo raise @error.CosError
+pub async fn Client::list_all_objects(Self, String, prefix? : String, delimiter? : String, max_keys? : Int32, max_pages? : Int32) -> ObjectListing raise @error.CosError
 pub async fn Client::list_bucket_inventories(Self, String) -> Array[InventoryConfig] raise @error.CosError
 pub async fn Client::list_buckets(Self) -> Array[BucketInfo] raise @error.CosError
 pub async fn Client::list_multipart_uploads(Self, String, prefix? : String, delimiter? : String, max_uploads? : Int32, key_marker? : String, upload_id_marker? : String) -> MultipartUploadListing raise @error.CosError

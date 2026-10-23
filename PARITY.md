@@ -2,8 +2,8 @@
 
 > 协议基线：[COS API 文档](https://cloud.tencent.com/document/product/436/10111)
 > 参考实现：`tencentyun/cos-python-sdk-v5@V1.9.44`（2026-05-29）；交叉核对 Go `v0.7.76`（2026-10-22）
-> 本仓版本：`mldong/moon-cos@0.11.0`
-> 当前公开面：75 个 `Client::` 方法（0.11.0）
+> 本仓版本：`mldong/moon-cos@0.13.0`
+> 当前公开面：76 个 `Client::` 方法（0.13.0）
 > 状态：现有行先记 `已实现`，真桶证据待按基线逐行复核
 
 ## 1. 当前公开面
@@ -58,7 +58,7 @@
 | COS-BKT-011 | 自定义域（Get/Put/DeleteBucketDomain） | `get_bucket_domain` `put_bucket_domain` `delete_bucket_domain` | P1 | 部分真桶 | 读真桶受账号权限 403，未验证；写只落离线件 |
 | COS-BKT-018 | 响应控制（Get/Put/DeleteBucketResponseControl） | `get_bucket_response_control` `put_bucket_response_control` `delete_bucket_response_control` | P1 | 部分真桶 | 读真桶受账号权限 403，未验证；写只落离线件 |
 | COS-BKT-012 | 智能分层（Get/PutBucketIntelligentTiering） | `get_bucket_intelligent_tiering` `put_bucket_intelligent_tiering` | P1 | 部分真桶 | 读真桶受账号权限 403，未验证；写只落离线件 |
-| COS-BKT-019 | 配额/桶信息（Quota/Info） | — | P1 | 未开始 | 配额、桶信息 |
+| COS-BKT-019 | 配额/桶信息（Quota/Info） | — | P1 | 不纳入 | 官方 Python 基线无此两族方法 |
 
 ### P2 · 便利/安全层
 
@@ -66,7 +66,7 @@
 |---|---|---|---|
 | COS-SEC-001 | STS/CAM 临时凭据（`x-cos-security-token`） | 部分实现 | `Credentials::with_security_token` 已接请求头；**预签名 URL 暂不支持**（显式拒）；缺 STS 凭据未真桶 |
 | COS-CNV-001 | 一条式自动分片 | `put_bytes_auto` | 部分真桶 | 2026-10-22 真桶绿（阈值触发分片并回收原对象）；断点续传/进度回调未做 |
-| COS-CNV-002 | TransferManager / 分页器 / 重试策略 | 未开始 | 与官方 SDK 高层入口对齐 |
+| COS-CNV-002 | TransferManager / 分页器 / 重试策略 | 部分实现 | `list_all_objects` 翻页器已落并真桶绿；进度回调/断点续传未做，重试是操作级重发 |
 
 ### P3 · 可选模块
 

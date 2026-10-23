@@ -63,7 +63,7 @@ jobs:
     name: Check / Build / Test (wasm + native, live COS bucket)
     runs-on: ubuntu-latest
     env:
-      EXPECTED_TESTS: "92"
+      EXPECTED_TESTS: "93"
       EXPECTED_SKIPS: "14"
       CI_EXPECTED_SKIPS: "0"
     steps:
