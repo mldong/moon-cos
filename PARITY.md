@@ -2,8 +2,8 @@
 
 > 协议基线：[COS API 文档](https://cloud.tencent.com/document/product/436/10111)
 > 参考实现：`tencentyun/cos-python-sdk-v5@V1.9.44`（2026-05-29）；交叉核对 Go `v0.7.76`（2026-10-22）
-> 本仓版本：`mldong/moon-cos@0.6.0`
-> 当前公开面：69 个 `Client::` 方法（0.6.0）
+> 本仓版本：`mldong/moon-cos@0.7.0`
+> 当前公开面：69 个 `Client::` 方法（0.7.0）
 > 状态：现有行先记 `已实现`，真桶证据待按基线逐行复核
 
 ## 1. 当前公开面
