@@ -95,6 +95,7 @@ pub async fn Client::get_bucket_acl(Self, String) -> ObjectAcl raise @error.CosE
 pub async fn Client::get_bucket_cors(Self, String) -> Array[CorsRule] raise @error.CosError
 pub async fn Client::get_bucket_domain(Self, String) -> Array[DomainRule] raise @error.CosError
 pub async fn Client::get_bucket_encryption(Self, String) -> String? raise @error.CosError
+pub async fn Client::get_bucket_intelligent_tiering(Self, String) -> IntelligentTieringConfig? raise @error.CosError
 pub async fn Client::get_bucket_inventory(Self, String, String) -> InventoryConfig? raise @error.CosError
 pub async fn Client::get_bucket_lifecycle(Self, String) -> Array[LifecycleRule] raise @error.CosError
 pub async fn Client::get_bucket_logging(Self, String) -> BucketLoggingStatus raise @error.CosError
@@ -122,6 +123,7 @@ pub async fn Client::put_bucket_acl(Self, String, CannedAcl) -> Unit raise @erro
 pub async fn Client::put_bucket_cors(Self, String, Array[CorsRule]) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_domain(Self, String, Array[DomainRule]) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_encryption(Self, String, algorithm? : String) -> Unit raise @error.CosError
+pub async fn Client::put_bucket_intelligent_tiering(Self, String, IntelligentTieringConfig) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_inventory(Self, String, InventoryConfig) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_lifecycle(Self, String, Array[LifecycleRule]) -> Unit raise @error.CosError
 pub async fn Client::put_bucket_logging(Self, String, String, target_prefix? : String) -> Unit raise @error.CosError
@@ -178,6 +180,12 @@ pub(all) struct DomainRule {
   forced_replacement : String
 }
 pub fn DomainRule::new(String, kind? : String, status? : String) -> Self
+
+pub(all) struct IntelligentTieringConfig {
+  status : String
+  days : Int32?
+}
+pub fn IntelligentTieringConfig::new(days? : Int32) -> Self
 
 pub(all) struct InventoryConfig {
   id : String

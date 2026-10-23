@@ -199,6 +199,17 @@ async fn extra_lifecycle_text(client : @cos.Client, bucket : String) -> String {
 }
 
 ///|
+async fn extra_tiering_text(client : @cos.Client, bucket : String) -> String {
+  let config = client.get_bucket_intelligent_tiering(bucket) catch {
+    err => return "err:" + err.text()
+  }
+  match config {
+    Some(_) => "ok:configured"
+    None => "ok:none"
+  }
+}
+
+///|
 async fn extra_domain_text(client : @cos.Client, bucket : String) -> String {
   let rules = client.get_bucket_domain(bucket) catch {
     err => return "err:" + err.text()
@@ -432,6 +443,7 @@ async test "真桶·存储类/自动 MD5/版本与 CORS 读：自命名前缀，
           extra_object_lock_text(client, bucket),
         )
         println("cos bucket domain read=" + extra_domain_text(client, bucket))
+        println("cos bucket tiering read=" + extra_tiering_text(client, bucket))
         println("cos bucket tagging read=" + extra_tagging_text(client, bucket))
         println("cos bucket logging read=" + extra_logging_text(client, bucket))
         println("cos bucket website read=" + extra_website_text(client, bucket))
