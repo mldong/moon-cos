@@ -912,3 +912,60 @@ async test "真桶·TransferManager：自动分片上传并清空状态" {
     }
   }
 }
+
+///|
+async test "真桶·TransferManager 下载与跨桶搬运" {
+  match extra_env() {
+    None => extra_skip()
+    Some(env) => {
+      let client = extra_build(env) catch {
+        err => fail("setup: " + err.text())
+      }
+      let bucket = env.3
+      let tag = extra_tag()
+      let src = tag + "-tm-src.bin"
+      let dst = tag + "-tm-dst.bin"
+      let payload = auto_filler(2621440)
+      let manager = @cos.TransferManager::new(
+        client,
+        bucket,
+        part_size=1048576,
+        threshold=1048576,
+      )
+      let outcome = try {
+        let _ = client.put_object(bucket, src, payload) catch {
+          err => fail("seed: " + err.text())
+        }
+        let downloaded = manager.download(src, chunk_size=1048576) catch {
+          err => fail("download: " + err.text())
+        }
+        if downloaded.body.length() != payload.length() {
+          fail("download size mismatch")
+        }
+        let _ = manager.copy_to(
+          src,
+          bucket,
+          dst,
+          threshold=1048576,
+          part_size=1048576,
+        ) catch {
+          err => fail("copy_to: " + err.text())
+        }
+        let copied = client.get_object(bucket, dst) catch {
+          err => fail("get copied: " + err.text())
+        }
+        if copied.body.length() != payload.length() {
+          fail("copied size mismatch")
+        }
+        "no-error"
+      } catch {
+        err => "measure: " + err.to_string()
+      }
+      extra_cleanup(client, bucket, [src, dst])
+      println("cos tm download/copy outcome=" + outcome)
+      if outcome != "no-error" {
+        fail(outcome)
+      }
+    }
+  }
+}

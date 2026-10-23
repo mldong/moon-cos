@@ -366,6 +366,8 @@ pub struct TransferManager {
   progress : ((Int32, Int32) -> Unit)?
   slot : Array[TransferState]
 }
+pub async fn TransferManager::copy_to(Self, String, String, String, threshold? : Int32, part_size? : Int32) -> String raise @error.CosError
+pub async fn TransferManager::download(Self, String, chunk_size? : Int32) -> ObjectData raise @error.CosError
 pub fn TransferManager::new(Client, String, part_size? : Int32, threshold? : Int32, progress? : ((Int32, Int32) -> Unit)?) -> Self
 pub fn TransferManager::restore(Client, String, TransferState, part_size? : Int32, threshold? : Int32, progress? : ((Int32, Int32) -> Unit)?) -> Self
 pub fn TransferManager::state(Self) -> TransferState
