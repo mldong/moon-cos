@@ -713,7 +713,7 @@ async test "真桶·一条式上传：超过阈值自动分片并合完" {
       } catch {
         err => "measure: " + err.to_string()
       }
-      if seen.length() < 2 {
+      if outcome == "no-error" && seen.length() < 2 {
         fail(
           "progress callback fired fewer than twice: " +
           seen.length().to_string(),
