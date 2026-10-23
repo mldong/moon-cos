@@ -193,7 +193,7 @@ moon add mldong/moon-cos
 | 批量删除／对象标签／条件请求 | `delete_objects`、标签三件、`if_match~` 等 | 已实现 |
 | 存储类／自动 MD5／CRC64 | `storage_class~`、`compute_md5~`、`object_crc64` | 已实现 |
 | 追加写／软链接 | `append_object`、`put_symlink` `get_symlink` | 部分实现（软链接建链 403） |
-| 对象内查询（CSV） | `select_object_csv`（原始事件流） | 部分实现 |
+| 对象内查询（CSV） | `select_object_csv` / `select_object_csv_records`（事件流已解码） | 部分实现 |
 | 归档解冻 | `restore_object` | 部分实现（仅离线件） |
 | 桶基础 | `create_bucket` `delete_bucket` `bucket_exists` | 部分实现（建/删未跑真桶） |
 | 桶配置读 | ACL／版本／CORS／标签／日志／网站／加密／生命周期／防盗链／策略／复制／清单／对象锁／自定义域／智能分层／响应控制 | 部分实现（账号权限 403） |

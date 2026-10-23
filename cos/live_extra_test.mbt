@@ -800,7 +800,9 @@ async fn extra_select_text(
   bucket : String,
   key : String,
 ) -> String {
-  let stream = client.select_object_csv(bucket, key, "Select * from COSObject") catch {
+  let records = client.select_object_csv_records(
+    bucket, key, "Select * from COSObject",
+  ) catch {
     err =>
       match err {
         @error.CosError::Service(details) =>
@@ -808,5 +810,5 @@ async fn extra_select_text(
         _ => return "err:" + err.text()
       }
   }
-  "ok:" + stream.length().to_string()
+  "ok:" + @utf8.decode_lossy(records)
 }

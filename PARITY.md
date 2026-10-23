@@ -2,8 +2,8 @@
 
 > 协议基线：[COS API 文档](https://cloud.tencent.com/document/product/436/10111)
 > 参考实现：`tencentyun/cos-python-sdk-v5@V1.9.44`（2026-05-29）；交叉核对 Go `v0.7.76`（2026-10-22）
-> 本仓版本：`mldong/moon-cos@0.15.0`
-> 当前公开面：77 个 `Client::` 方法（0.14.0）
+> 本仓版本：`mldong/moon-cos@0.16.0`
+> 当前公开面：78 个 `Client::` 方法（0.16.0）
 > 状态：现有行先记 `已实现`，真桶证据待按基线逐行复核
 
 ## 1. 当前公开面
@@ -44,7 +44,7 @@
 | COS-OBJ-009 | 追加写（AppendObject） | `append_object` | P1 | 真桶已验证 | `cos/append_ops_wbtest.mbt`、`cos/live_extra_test.mbt`（2026-10-22） |
 | COS-OBJ-010 | 重命名（RenameObject） | — | P1 | 不纳入核心 | 官方 Python `rename_object` 仅支持 Rapid Bucket，普通桶改用 copy+delete |
 | COS-OBJ-011 | 软链接（Put/GetSymlink） | `put_symlink` `get_symlink` | P1 | 部分真桶 | 建链真桶 403（账号权限），未验证；离线件已落 |
-| COS-OBJ-013 | 对象内查询（SelectObjectContent） | `select_object_csv` | P1 | 部分真桶 | 2026-10-22 真桶事件流 426 字节；只做 CSV 输入/输出与原始帧，JSON 输入与帧解码待补 |
+| COS-OBJ-013 | 对象内查询（SelectObjectContent） | `select_object_csv` `select_object_csv_records` `select_records` | P1 | 部分真桶 | 真桶解出 Records（实测内容含 `alice,30`）；JSON 输入与 CRC 校验未做 |
 | COS-BKT-006 | 桶标签（Get/Put/DeleteBucketTagging） | `get_bucket_tagging` `put_bucket_tagging` `delete_bucket_tagging` | P1 | 已实现 | 读真桶受账号权限限制，未验证 |
 | COS-BKT-007 | 桶日志（Get/PutBucketLogging） | `get_bucket_logging` `put_bucket_logging` | P1 | 已实现 | 读真桶受账号权限限制，未验证 |
 | COS-BKT-008 | 防盗链（Referer） | `get_bucket_referer` `put_bucket_referer` `delete_bucket_referer` | P1 | 部分真桶 | 读真桶受账号权限 403，未验证；写入未跑 |
