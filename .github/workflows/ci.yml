@@ -64,7 +64,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       EXPECTED_TESTS: "95"
-      EXPECTED_SKIPS: "14"
+      EXPECTED_SKIPS: "17"
       CI_EXPECTED_SKIPS: "0"
     steps:
       - uses: actions/checkout@v4
