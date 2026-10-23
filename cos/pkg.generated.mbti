@@ -144,6 +144,7 @@ pub async fn Client::put_object_acl(Self, String, String, CannedAcl) -> Unit rai
 pub async fn Client::put_object_tagging(Self, String, String, Array[ObjectTag]) -> Unit raise @error.CosError
 pub async fn Client::put_symlink(Self, String, String, String, forbid_overwrite? : Bool, storage_class? : String, acl? : String) -> Unit raise @error.CosError
 pub async fn Client::restore_object(Self, String, String, days? : Int32, tier? : String) -> Unit raise @error.CosError
+pub async fn Client::select_object_csv(Self, String, String, String, record_delimiter? : String, field_delimiter? : String) -> Bytes raise @error.CosError
 pub async fn Client::stat_object(Self, String, String, if_match? : String, if_none_match? : String, if_modified_since? : String, if_unmodified_since? : String) -> ObjectStat raise @error.CosError
 pub async fn Client::upload_part(Self, String, String, String, Int32, Bytes, content_md5? : String, compute_md5? : Bool) -> String raise @error.CosError
 pub async fn Client::upload_part_copy(Self, String, String, String, String, String, Int32, copy_source_range? : String, copy_source_if_match? : String, copy_source_if_none_match? : String, copy_source_if_modified_since? : String, copy_source_if_unmodified_since? : String) -> UploadPartCopyResult raise @error.CosError
