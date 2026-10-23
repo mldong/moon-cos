@@ -660,3 +660,62 @@ async test "真桶·软链接：建链读目标，删链不删目标" {
     }
   }
 }
+
+///|
+fn auto_filler(total : Int32) -> Bytes {
+  let block = "moon-auto-filler-0123456789abcdef-"
+  let mut out = block
+  while out.length() < total {
+    out = out + out
+  }
+  @utf8.encode(out[0:total].to_owned())
+}
+
+///|
+async test "真桶·一条式上传：超过阈值自动分片并合完" {
+  match extra_env() {
+    None => extra_skip()
+    Some(env) => {
+      let client = extra_build(env) catch {
+        err => fail("setup: " + err.text())
+      }
+      let bucket = env.3
+      let key = extra_tag() + "-auto.bin"
+      let payload = auto_filler(2621440)
+      let outcome = try {
+        let put = client.put_bytes_auto(
+          bucket,
+          key,
+          payload,
+          part_size=1048576,
+          threshold=1048576,
+          content_type="application/octet-stream",
+        ) catch {
+          err => fail("put_bytes_auto: " + err.text())
+        }
+        if put.etag.is_empty() {
+          fail("auto upload returned an empty etag")
+        }
+        let got = client.get_object(bucket, key) catch {
+          err => fail("get after auto upload: " + err.text())
+        }
+        if got.body.length() != payload.length() {
+          fail(
+            "auto upload size mismatch: " +
+            got.body.length().to_string() +
+            " != " +
+            payload.length().to_string(),
+          )
+        }
+        "no-error"
+      } catch {
+        err => "measure: " + err.to_string()
+      }
+      extra_cleanup(client, bucket, [key])
+      println("moon-cos auto upload outcome=" + outcome)
+      if outcome != "no-error" {
+        fail(outcome)
+      }
+    }
+  }
+}
