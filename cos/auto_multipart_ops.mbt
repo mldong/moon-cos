@@ -10,6 +10,7 @@ pub async fn Client::put_bytes_auto(
   threshold~ : Int32 = 8388608,
   content_type~ : String = "",
   compute_md5~ : Bool = false,
+  progress~ : ((Int32, Int32) -> Unit)? = None,
 ) -> PutObjectResult raise @error.CosError {
   if part_size <= 0 || threshold <= 0 {
     raise @error.BadParam("part_size and threshold must be positive")
@@ -41,6 +42,10 @@ pub async fn Client::put_bytes_auto(
       parts.push((part_number, part_etag))
       part_number = part_number + 1
       offset = end
+      match progress {
+        Some(report) => report(offset, data.length())
+        None => ()
+      }
     }
     Ok(self.complete_multipart_upload(bucket, key, upload_id, parts~).etag)
   } catch {
