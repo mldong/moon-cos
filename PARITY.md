@@ -64,7 +64,7 @@
 
 | ID | 能力 | 状态 | 备注 |
 |---|---|---|---|
-| COS-SEC-001 | STS/CAM 临时凭据（`x-cos-security-token`） | 部分实现 | `Credentials::with_security_token` 已接请求头；**预签名 URL 暂不支持**（显式拒）；缺 STS 凭据未真桶 |
+| COS-SEC-001 | STS/CAM 临时凭据（`x-cos-security-token`） | 部分实现 | 请求头 + 预签名查询串（`x-cos-security-token`）都已接；缺 STS 凭据未真桶 |
 | COS-CNV-001 | 一条式自动分片 + 进度回调 | `put_bytes_auto`（`progress~` 按片回调） | 部分真桶 | 真桶绿（分片与回调触发均验证）；断点续传未做 |
 | COS-CNV-002 | TransferManager / 分页器 / 重试策略 | 部分实现 | `list_all_objects` 翻页器已落并真桶绿；进度回调/断点续传未做，重试是操作级重发 |
 

@@ -1,17 +1,12 @@
 ///|
-test "presigned URLs reject sts credentials instead of dropping the token" {
+test "presigned URLs carry the sts token in the signed query" {
   let credentials = @auth.Credentials::new("id", "key").with_security_token(
     "token-1",
   )
   let config = @config.Config::new("ap-guangzhou", credentials)
   let client = Client::new(config, @transport.AsyncHttpTransport::new())
-  let mut rejected = false
-  let _ = client.presigned_get_url("b-1250000000", "k") catch {
-    @error.CosError::BadParam(_) => {
-      rejected = true
-      ""
-    }
-    _ => ""
+  let url = client.presigned_get_url("b-1250000000", "k") catch {
+    _ => abort("presign must work with an sts token")
   }
-  assert_true(rejected)
+  assert_true(url.contains("x-cos-security-token=token-1"))
 }

@@ -48,14 +48,12 @@ fn Client::presigned_url(
   headers~ : Array[(String, String)] = [],
   query~ : Array[(String, String)] = [],
 ) -> String raise @error.CosError {
-  match self.config.credentials().security_token() {
-    Some(_) =>
-      raise @error.CosError::BadParam(
-        "STS security tokens are not supported in presigned URLs yet",
-      )
-    None => ()
-  }
   let config = self.config
+  // STS 令牌走查询串，并且要参与 `q-sign-*` 的签名（官方预签名把 token 放 query）。
+  let query = match config.credentials().security_token() {
+    Some(token) => query + [("x-cos-security-token", token)]
+    None => query
+  }
   let host = config.host(bucket)
   let window = @auth.window_at(@auth.now_millis(), expires_sec)
   let signed = @auth.presign_query(
