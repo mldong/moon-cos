@@ -37,7 +37,11 @@ fn extra_build(
 ) -> @cos.Client raise @error.CosError {
   let credentials = @auth.Credentials::new(env.0, env.1)
   let config = @config.Config::new(env.2, credentials)
-  @cos.Client::new(config, @transport.AsyncHttpTransport::new())
+  // 与 live_test 同一档：CI runner 到境内桶的上行慢，30 秒默认界会把大一点的 live 腿判成网络超时。
+  let transport : &@transport.Transport = @transport.AsyncHttpTransport::new(
+    timeout=120000,
+  )
+  @cos.Client::new(config, transport)
 }
 
 ///|
